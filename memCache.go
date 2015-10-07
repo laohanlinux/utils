@@ -44,16 +44,16 @@ var nbc *NonBlockingChan
 
 // define a []byte type memcache pool
 type NonBlockingChan struct {
-	send chan<- []byte
-	recv <-chan []byte
+	send chan []byte
+	recv chan []byte
 	once sync.Once
 }
 
-func NewNonBlockingChan() (chan<- []byte, <-chan []byte) {
+func NewNonBlockingChan() (<-chan []byte, chan<- []byte) {
 	if nbc == nil {
 		nbc = &NonBlockingChan{
-			send: make(chan<- []byte),
-			recv: make(<-chan []byte),
+			send: make(chan []byte),
+			recv: make(chan []byte),
 		}
 	}
 
