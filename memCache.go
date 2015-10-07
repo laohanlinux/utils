@@ -47,7 +47,7 @@ type NonBlockingChan struct {
 	recv <-chan []byte
 }
 
-func newNonBlockingChan() (chan<- []byte, <-chan []byte) {
+func NewNonBlockingChan() (chan<- []byte, <-chan []byte) {
 	if nbc == nil {
 		nbc = &NonBlockingChan{
 			send: make(chan<- []byte),
