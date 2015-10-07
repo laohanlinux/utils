@@ -2,7 +2,7 @@ package memCache
 
 import (
 	"container/list"
-	"errors"
+	//	"errors"
 	"fmt"
 	"runtime/debug"
 	"time"
@@ -14,6 +14,7 @@ const (
 	UnKownMemCachePoolType = "unkown memCachePool type"
 )
 
+/**
 type MemCachePoolFactory struct {
 }
 
@@ -33,7 +34,7 @@ func (mcpf MemCachePoolFactory) GetMemCachePool(memCachePoolType string) (*MemCa
 		return nil, errors.New(UnKownMemCachePoolType)
 	}
 }
-
+*/
 type MemCachePool interface {
 	bufferSize() uint64
 }
