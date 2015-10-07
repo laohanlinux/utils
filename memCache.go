@@ -58,7 +58,7 @@ func NewNonBlockingChan() (chan<- []byte, <-chan []byte) {
 	}
 
 	if nbc != nil {
-		nbc.once.Do(nbc.doWork)
+		nbc.once.Do(func() { go nbc.doWork() })
 	}
 
 	return nbc.send, nbc.recv
@@ -73,7 +73,7 @@ func (nbc *NonBlockingChan) doWork() {
 		if err := recover(); err != nil {
 			// do some something
 			fmt.Println("MemCachePool unexpectedly terminated, err:", err)
-			nbc.doWork()
+			go nbc.doWork()
 		}
 		debug.FreeOSMemory()
 	}()
