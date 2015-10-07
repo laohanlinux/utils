@@ -5,6 +5,7 @@ import (
 	//	"errors"
 	"fmt"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -45,6 +46,7 @@ var nbc *NonBlockingChan
 type NonBlockingChan struct {
 	send chan<- []byte
 	recv <-chan []byte
+	once sync.Once
 }
 
 func NewNonBlockingChan() (chan<- []byte, <-chan []byte) {
@@ -56,7 +58,7 @@ func NewNonBlockingChan() (chan<- []byte, <-chan []byte) {
 	}
 
 	if nbc != nil {
-		nbc.doWork()
+		nbc.once.Do(nbc.doWork)
 	}
 
 	return nbc.send, nbc.recv
