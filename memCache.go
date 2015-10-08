@@ -90,8 +90,9 @@ func (nbc *NonBlockingChan) doWork() {
 		case nbc.send <- items.Remove(items.Front()).([]byte):
 		case <-timeout.C:
 			// do clear memcache work, because no one are use the memcache pool
-			if items.Len() > 0 {
-				for i := 0; i < items.Len()/2; i++ {
+			itemsLen := items.Len()
+			if itemsLen > 0 {
+				for i := 0; i < itemsLen/2; i++ {
 					items.Remove(items.Front())
 				}
 				debug.FreeOSMemory()
