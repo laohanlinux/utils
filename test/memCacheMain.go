@@ -17,7 +17,7 @@ func main() {
 
 	for i := 0; i < currentNumbers; i++ {
 		go func() {
-			g.Add()
+			g.Add(1)
 			defer g.Done()
 			<-s
 			time.Sleep(time.Second * 1)
@@ -25,4 +25,7 @@ func main() {
 	}
 
 	g.Wait()
+	time.Sleep(time.Second * 60)
+	fmt.Println("warning")
+	time.Sleep(time.Second * 60 * 2)
 }
