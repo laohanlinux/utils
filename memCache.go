@@ -64,7 +64,8 @@ func NewNonBlockingChan() (<-chan []byte, chan<- []byte) {
 	return nbc.send, nbc.recv
 }
 
-func (nbc NonBlockingChan) makeBuffer() []byte { return make([]byte, 1024*1024*32) }
+// Very Block is 4kb
+func (nbc NonBlockingChan) makeBuffer() []byte { return make([]byte, 1024*4) }
 
 func (nbc NonBlockingChan) bufferSize() uint64 { return 0 }
 
