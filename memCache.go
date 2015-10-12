@@ -38,22 +38,25 @@ func (mcpf MemCachePoolFactory) GetMemCachePool(memCachePoolType string) (*MemCa
 */
 type MemCachePool interface {
 	bufferSize() uint64
+	SetBufferSize(uint64)
 }
 
 var nbc *NonBlockingChan
 
 // define a []byte type memcache pool
 type NonBlockingChan struct {
-	send chan []byte
-	recv chan []byte
-	once sync.Once
+	send      chan []byte
+	recv      chan []byte
+	once      sync.Once
+	blockSize uint64
 }
 
 func NewNonBlockingChan() (<-chan []byte, chan<- []byte) {
 	if nbc == nil {
 		nbc = &NonBlockingChan{
-			send: make(chan []byte),
-			recv: make(chan []byte),
+			send:      make(chan []byte),
+			recv:      make(chan []byte),
+			blockSize: 1024 * 4,
 		}
 	}
 
@@ -65,9 +68,11 @@ func NewNonBlockingChan() (<-chan []byte, chan<- []byte) {
 }
 
 // Very Block is 4kb
-func (nbc NonBlockingChan) makeBuffer() []byte { return make([]byte, 1024*4) }
+func (nbc NonBlockingChan) makeBuffer() []byte { return make([]byte, nbc.blockSize) }
 
 func (nbc NonBlockingChan) bufferSize() uint64 { return 0 }
+
+func (nbc *NonBlockingChan) SetBufferSize(blockSize uint64) { nbc.blockSize = blockSize }
 
 func (nbc *NonBlockingChan) doWork() {
 	defer func() {

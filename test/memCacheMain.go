@@ -25,7 +25,7 @@ func main() {
 	}
 
 	g.Wait()
-	time.Sleep(time.Second * 60)
+	time.Sleep(time.Second * 10)
 	fmt.Println("warning")
 	time.Sleep(time.Second * 60 * 2)
 }
