@@ -6,25 +6,39 @@ import (
     _ "net/http/pprof"
     "time"
 
+    "github.com/laohanlinux/memCache/kgredis"
     "math/rand"
+    "net"
     "runtime"
     "strconv"
     "sync"
-
-    "github.com/laohanlinux/memCache/kgredis"
 )
 
-func doSetWork() {
+func doSetWork(rdpc *kgredis.RedisPoolChan) {
     var g sync.WaitGroup
-    for i := 0; i < 1024; i++ {
+    for i := 0; i < numbers; i++ {
         g.Add(1)
         go func(key int) {
             defer g.Done()
             for {
-                r := Get()
+                time.Sleep(time.Second * 1)
+                r, err := rdpc.Get(1000)
 
-                p.SetString(strconv.Itoa(key), []byte(strconv.Itoa(key)), 10)
-                runtime.Gosched()
+                if err != nil {
+                    fmt.Println(err)
+                    continue
+                }
+
+                err = r.ReadReply().Err
+                if err != nil {
+                    fmt.Printf("Get Reply:%s\n", err)
+                    rdpc.Put(r, err)
+                }
+                err = r.Cmd("SET", strconv.Itoa(key), strconv.Itoa(key)).Err
+                if err != nil {
+                    fmt.Println(err)
+                }
+                rdpc.Put(r, err)
             }
         }(i)
     }
@@ -33,23 +47,39 @@ func doSetWork() {
 
 }
 
-func doGetWork() {
+func doGetWork(rdpc *kgredis.RedisPoolChan) {
     var g sync.WaitGroup
-    for i := 0; i < 102400; i++ {
+    for i := 0; i < numbers; i++ {
         g.Add(1)
         go func() {
             defer g.Done()
             for {
+                time.Sleep(time.Second * 1)
                 idx := rand.Intn(1024)
-                value, err := p.GetString(strconv.Itoa(idx))
+                r, err := rdpc.Get(1000)
                 if err != nil {
-                    fmt.Println("get error:", err)
-                } else {
+                    fmt.Println(err)
+                    continue
+                }
+                //err = r.ReadReply()
 
-                    fmt.Printf("key:%d, value:%v\n", idx, value)
+                reply := r.Cmd("GET", strconv.Itoa(idx))
+
+                if reply.Err != nil {
+                    if _, ok := reply.Err.(*net.OpError); ok {
+                        fmt.Printf("reply: %v\n", reply.Err)
+                        rdpc.Put(r, err)
+                        continue
+                    }
                 }
 
-                runtime.Gosched()
+                value, err := reply.Bytes()
+                if err != nil {
+                    fmt.Println(err)
+                } else {
+                    fmt.Printf("value: %s\n", value)
+                }
+                rdpc.Put(r, nil)
             }
         }()
     }
@@ -57,19 +87,19 @@ func doGetWork() {
 
 }
 
-var numbers = 10
+var numbers = 1
 
 func main() {
 
     runtime.GOMAXPROCS(runtime.NumCPU())
     //NewRedisPoolConn(address string, maxIdle, maxActive int, idleTimeout, defaultExpire int64)
-    err := kgredis.NewRedisPoolChan("localhost:6379", 100)
-    if err == nil {
-        fmt.Println("redis pool is empty")
+    rdpc, err := kgredis.NewRedisPoolChan("localhost:6379", 100)
+    if err != nil {
+        fmt.Println(err)
         return
     }
-    go doSetWork()
-    go doGetWork()
+    go doSetWork(rdpc)
+    go doGetWork(rdpc)
 
     http.ListenAndServe(":6060", nil)
     time.Sleep(time.Second * 30)
