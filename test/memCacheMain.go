@@ -10,22 +10,29 @@ import (
 )
 
 func main() {
-	s, _ := memCache.NewNonBlockingChan()
+	s, r := memCache.NewNonBlockingChan()
 
 	var g sync.WaitGroup
 	currentNumbers, _ := strconv.Atoi(os.Args[1])
 
 	for i := 0; i < currentNumbers; i++ {
-		go func() {
-			g.Add(1)
+		g.Add(1)
+		go func(idx int) {
 			defer g.Done()
-			<-s
-			time.Sleep(time.Second * 1)
-		}()
+			for i := 0; i < 10000; i++ {
+				var s1 []byte
+				if i%2 == 0 {
+					fmt.Println(idx, "申请到一块内存")
+					s1 = <-s
+				} else {
+					fmt.Println("====")
+					s1 = make([]byte, 1024)
+				}
+				time.Sleep(time.Second * 1)
+				r <- s1
+			}
+		}(i)
 	}
 
 	g.Wait()
-	time.Sleep(time.Second * 10)
-	fmt.Println("warning")
-	time.Sleep(time.Second * 60 * 2)
 }
