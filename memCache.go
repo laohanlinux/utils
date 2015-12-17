@@ -2,42 +2,21 @@ package memCache
 
 import (
 	"container/list"
-	//	"errors"
+	"errors"
 	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
 )
 
+var BinaryMemCachePool = errors.New("binarymemcachepool")
+
+var UnKownMemCachePoolType = errors.New("unkown memCachePool type")
+
 const (
-	BinaryMemCachePool = "binarymemcachepool"
-
-	UnKownMemCachePoolType = "unkown memCachePool type"
-
 	THRESHOLD_FREE_OS_MEMORY = 268435456
 )
 
-/**
-type MemCachePoolFactory struct {
-}
-
-func (mcpf MemCachePoolFactory) GetMemCachePool(memCachePoolType string) (*MemCachePool, error) {
-	switch {
-	case memCachePoolType == BinaryMemCachePool:
-		if nbc == nil {
-			send, recv := newNonBlockingChan()
-			nbc = &NonBlockingChan{
-				send: send,
-				recv: recv,
-			}
-			return (*MemCachePool)(nbc), nil
-		}
-		return nil, nil
-	default:
-		return nil, errors.New(UnKownMemCachePoolType)
-	}
-}
-*/
 type MemCachePool interface {
 	bufferSize() uint64
 	SetBufferSize(uint64)
@@ -90,8 +69,6 @@ func (nbc *NonBlockingChan) doWork() {
 	}()
 
 	items := list.New()
-	//timeout := time.NewTimer(time.Minute)
-	timeout := time.NewTimer(time.Second * 5)
 	for {
 		if items.Len() == 0 {
 			items.PushFront(noBuffferObj{
@@ -99,28 +76,25 @@ func (nbc *NonBlockingChan) doWork() {
 				used: time.Now(),
 			})
 		}
+		e := items.Front()
 		select {
-		case e := <-nbc.recv:
+		case item := <-nbc.recv:
+			fmt.Println("memCache收到回收的需要回收的内存")
 			items.PushBack(noBuffferObj{
-				b:    e,
+				b:    item,
 				used: time.Now(),
 			})
-		case nbc.send <- items.Remove(items.Front()).(noBuffferObj).b:
-		case <-timeout.C:
-			// do clear memcache work, because no one are use the memcache pool
-			itemsLen := items.Len()
-			fmt.Println("do clear memCache work:", time.Now().Unix())
-			if itemsLen > 0 {
-				for i := 0; i < itemsLen/2; i++ {
-					items.Remove(items.Front())
-				}
-				debug.FreeOSMemory()
-			}
-			timeout.Reset(time.Second * 5)
+			fmt.Println("item len:", items.Len())
+		case nbc.send <- e.Value.(noBuffferObj).b:
+			oldLen := items.Len()
+			items.Remove(e)
+			newLen := items.Len()
+			fmt.Println("oldLen:", oldLen, "newLen:", newLen)
 		case <-nbc.freeMem:
 			// free too old memcached
 			fmt.Println("开始释放旧数据=>", items.Len())
 			item := items.Front()
+
 			if item != nil {
 				fmt.Printf("内存对象最新使用时间:%d\n", item.Value.(noBuffferObj).used.Unix())
 			}
@@ -129,8 +103,9 @@ func (nbc *NonBlockingChan) doWork() {
 				nItem := item.Next()
 				fmt.Printf("内存对象最新使用时间:%d\n", item.Value.(noBuffferObj).used.Unix())
 				if time.Since(item.Value.(noBuffferObj).used) > (time.Second * time.Duration(10)) {
-					fmt.Println("free memCache obj:", item)
+					fmt.Println("free memCache obj:", item.Value.(noBuffferObj).used.Unix())
 					items.Remove(item)
+					item.Value = nil
 				} else {
 					break
 				}
@@ -147,7 +122,7 @@ func (nbc *NonBlockingChan) doWork() {
 // free old memcache object, timeout = 1 minute not to be used
 func (nbc *NonBlockingChan) freeOldMemCache() {
 	//timeout := time.NewTimer(time.Minute * 5)
-	timeout := time.NewTicker(time.Second * 10)
+	timeout := time.NewTicker(time.Second * 2)
 	for {
 		select {
 		case <-timeout.C:
