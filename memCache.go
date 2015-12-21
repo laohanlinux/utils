@@ -2,48 +2,52 @@ package memCache
 
 import (
 	"container/list"
-	"errors"
-	"fmt"
+	//	"errors"
+
 	"runtime/debug"
 	"sync"
 	"time"
 )
 
-var BinaryMemCachePool = errors.New("binarymemcachepool")
+// var BinaryMemCachePool = errors.New("binarymemcachepool")
+//
+// var UnKownMemCachePoolType = errors.New("unkown memCachePool type")
 
-var UnKownMemCachePoolType = errors.New("unkown memCachePool type")
-
+// ThresholdFreeOsMemory (256M) for memCache size to free to os
 const (
-	THRESHOLD_FREE_OS_MEMORY = 268435456
+	ThresholdFreeOsMemory = 268435456
 )
 
-type MemCachePool interface {
-	bufferSize() uint64
-	SetBufferSize(uint64)
-}
+// type MemCachePool interface {
+// 	bufferSize() uint64
+// 	SetBufferSize(uint64)
+// }
 
-var nbc *NonBlockingChan
-
-// define a []byte type memcache pool
-type NonBlockingChan struct {
-	send      chan []byte
-	recv      chan []byte
-	freeMem   chan byte
-	blockSize uint64
-}
+var nbc *NoBlockingChan
 
 // memCache Object
 type noBuffferObj struct {
 	b    []byte
-	used time.Time
+	used int64
 }
 
 var memCacheOnce sync.Once
 
-// blockSize: memcache block size, default 4k
-func NewNonBlockingChan(blockSize ...int) (<-chan []byte, chan<- []byte) {
+// NoBlockingChan is a no block channel for memory cache.
+// the recycle time is 1 minute ;
+// the recycle threshold of total memory is 268435456;
+// the recycle threshold of ervry block timeout is 5 minutes
+type NoBlockingChan struct {
+	send      chan []byte //
+	recv      chan []byte //
+	freeMem   chan byte   //
+	blockSize uint64      //
+}
+
+// NewNoBlockingChan for create a no blocking chan with size block
+func NewNoBlockingChan(blockSize ...int) (<-chan []byte, chan<- []byte) {
 	memCacheOnce.Do(func() {
-		nbc = &NonBlockingChan{
+		nbc = &NoBlockingChan{
 			send:      make(chan []byte),
 			recv:      make(chan []byte),
 			freeMem:   make(chan byte),
@@ -55,15 +59,17 @@ func NewNonBlockingChan(blockSize ...int) (<-chan []byte, chan<- []byte) {
 	return nbc.send, nbc.recv
 }
 
+// SetBufferSize used to set no blocking channel into blockSize
+func (nbc *NoBlockingChan) SetBufferSize(blockSize uint64) {
+	nbc.blockSize = blockSize
+}
+
 // Very Block is 4kb
-//func (nbc NonBlockingChan) makeBuffer() []byte { return make([]byte, nbc.blockSize) }
-func (nbc *NonBlockingChan) makeBuffer() []byte { return make([]byte, nbc.blockSize) }
+func (nbc *NoBlockingChan) makeBuffer() []byte { return make([]byte, nbc.blockSize) }
 
-func (nbc *NonBlockingChan) bufferSize() uint64 { return 0 }
+func (nbc *NoBlockingChan) bufferSize() uint64 { return 0 }
 
-func (nbc *NonBlockingChan) SetBufferSize(blockSize uint64) { nbc.blockSize = blockSize }
-
-func (nbc *NonBlockingChan) doWork() {
+func (nbc *NoBlockingChan) doWork() {
 	defer func() {
 		debug.FreeOSMemory()
 	}()
@@ -71,39 +77,28 @@ func (nbc *NonBlockingChan) doWork() {
 	items := list.New()
 	for {
 		if items.Len() == 0 {
-			items.PushFront(noBuffferObj{
+			items.PushBack(noBuffferObj{
 				b:    nbc.makeBuffer(),
-				used: time.Now(),
+				used: time.Now().Unix(),
 			})
 		}
 		e := items.Front()
 		select {
 		case item := <-nbc.recv:
-			fmt.Println("memCache收到回收的需要回收的内存")
 			items.PushBack(noBuffferObj{
 				b:    item,
-				used: time.Now(),
+				used: time.Now().Unix(),
 			})
-			fmt.Println("item len:", items.Len())
 		case nbc.send <- e.Value.(noBuffferObj).b:
-			oldLen := items.Len()
 			items.Remove(e)
-			newLen := items.Len()
-			fmt.Println("oldLen:", oldLen, "newLen:", newLen)
 		case <-nbc.freeMem:
 			// free too old memcached
-			fmt.Println("开始释放旧数据=>", items.Len())
 			item := items.Front()
-
-			if item != nil {
-				fmt.Printf("内存对象最新使用时间:%d\n", item.Value.(noBuffferObj).used.Unix())
-			}
 			var freeSize uint64
+			freeTime := time.Now().Unix()
 			for item != nil {
 				nItem := item.Next()
-				fmt.Printf("内存对象最新使用时间:%d\n", item.Value.(noBuffferObj).used.Unix())
-				if time.Since(item.Value.(noBuffferObj).used) > (time.Second * time.Duration(10)) {
-					fmt.Println("free memCache obj:", item.Value.(noBuffferObj).used.Unix())
+				if (freeTime - item.Value.(noBuffferObj).used) > 300 {
 					items.Remove(item)
 					item.Value = nil
 				} else {
@@ -112,7 +107,8 @@ func (nbc *NonBlockingChan) doWork() {
 				item = nItem
 				freeSize += nbc.blockSize
 			}
-			if freeSize > THRESHOLD_FREE_OS_MEMORY {
+			// if needed free memory more than ThresholdFreeOsMemory, call the debug.FreeOSMemory
+			if freeSize > ThresholdFreeOsMemory {
 				debug.FreeOSMemory()
 			}
 		}
@@ -120,13 +116,12 @@ func (nbc *NonBlockingChan) doWork() {
 }
 
 // free old memcache object, timeout = 1 minute not to be used
-func (nbc *NonBlockingChan) freeOldMemCache() {
+func (nbc *NoBlockingChan) freeOldMemCache() {
 	//timeout := time.NewTimer(time.Minute * 5)
-	timeout := time.NewTicker(time.Second * 2)
+	timeout := time.NewTicker(time.Second * 60)
 	for {
 		select {
 		case <-timeout.C:
-			fmt.Println("free memCacheOnce timeout:", time.Now().Unix())
 			nbc.freeMem <- 'f'
 		}
 	}
