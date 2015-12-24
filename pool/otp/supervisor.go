@@ -1,4 +1,4 @@
-package pool
+package otp
 
 import (
 	"errors"
@@ -51,4 +51,11 @@ func (s *KGSupervisor) start() {
 
 func (s *KGSupervisor) stop() {
 
+}
+
+type Worker interface {
+	start()
+	terminate()
+	reply()
+	noReply()
 }
