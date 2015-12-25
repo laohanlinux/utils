@@ -33,7 +33,7 @@ type NoBlockingChan struct {
 	blockSize uint64      //
 }
 
-// NewNoBlockingChan for create a no blocking chan with size block
+// NewNoBlockingChan for create a no blocking chan bytes with size block
 func NewNoBlockingChan(blockSize ...int) *NoBlockingChan {
 	memCacheOnce.Do(func() {
 		nbc = &NoBlockingChan{

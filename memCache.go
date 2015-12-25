@@ -1,44 +1,31 @@
 package memCache
 
-//	"errors"
-
-// var BinaryMemCachePool = errors.New("binarymemcachepool")
-//
-// var UnKownMemCachePoolType = errors.New("unkown memCachePool type")
-
-// ThresholdFreeOsMemory (256M) for memCache size to free to os
-const (
-	ThresholdFreeOsMemory = 268435456
+import (
+	"github.com/laohanlinux/memCache/memCachePool"
 )
 
+//
 const (
 	NoBlokingBytesType     = 0
 	NoBlokingChanBytesType = 1
 )
 
-//
+// MemCacheFactory ...
 type MemCacheFactory struct {
 }
 
+//GetMemCachePool ....
 func (m MemCacheFactory) GetMemCachePool(memCacheType, poolSize int) MemCachePool {
 	switch memCacheType {
 	case NoBlokingBytesType:
-
+		return memCachePool.NewNoBlockingBytesChan(poolSize)
 	case NoBlokingChanBytesType:
+		return memCachePool.NewNoBlockingChan(poolSize)
 	default:
-		return
+		return nil
 	}
-
 }
 
 // MemCachePool is a interface for different type memecache
 type MemCachePool interface {
-}
-
-var nbc *NoBlockingChan
-
-// memCache Object
-type noBuffferObj struct {
-	b    []byte
-	used int64
 }
