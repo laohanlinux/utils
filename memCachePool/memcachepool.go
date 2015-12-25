@@ -1,4 +1,4 @@
-package memCache
+package memCachePool
 
 import (
 	"github.com/laohanlinux/memCache/memCachePool"
