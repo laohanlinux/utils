@@ -1,27 +1,22 @@
-package memCache
+package memCachePool
 
 import (
 	"container/list"
-	//	"errors"
-
+	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
-)
 
-// var BinaryMemCachePool = errors.New("binarymemcachepool")
-//
-// var UnKownMemCachePoolType = errors.New("unkown memCachePool type")
+	"github.com/laohanlinux/go-logger/logger"
+)
 
 // ThresholdFreeOsMemory (256M) for memCache size to free to os
 const (
 	ThresholdFreeOsMemory = 268435456
+	LifeTimeChan          = 30
 )
 
-// type MemCachePool interface {
-// 	bufferSize() uint64
-// 	SetBufferSize(uint64)
-// }
+var noblockOnece sync.Once
 
 var nbc *NoBlockingChan
 
@@ -30,8 +25,6 @@ type noBuffferObj struct {
 	b    []byte
 	used int64
 }
-
-var memCacheOnce sync.Once
 
 // NoBlockingChan is a no block channel for memory cache.
 // the recycle time is 1 minute ;
@@ -44,9 +37,10 @@ type NoBlockingChan struct {
 	blockSize uint64      //
 }
 
-// NewNoBlockingChan for create a no blocking chan with size block
-func NewNoBlockingChan(blockSize ...int) (<-chan []byte, chan<- []byte) {
-	memCacheOnce.Do(func() {
+// NewNoBlockingChan for create a no blocking chan bytes with size block
+func NewNoBlockingChan(blockSize ...int) *NoBlockingChan {
+	noblockOnece.Do(func() {
+		logger.Info("do once")
 		nbc = &NoBlockingChan{
 			send:      make(chan []byte),
 			recv:      make(chan []byte),
@@ -56,8 +50,14 @@ func NewNoBlockingChan(blockSize ...int) (<-chan []byte, chan<- []byte) {
 		go nbc.doWork()
 		go nbc.freeOldMemCache()
 	})
-	return nbc.send, nbc.recv
+	return nbc
 }
+
+// SendChan ...
+func (nbc *NoBlockingChan) SendChan() <-chan []byte { return nbc.send }
+
+// RecycleChan ...
+func (nbc *NoBlockingChan) RecycleChan() chan<- []byte { return nbc.recv }
 
 // SetBufferSize used to set no blocking channel into blockSize
 func (nbc *NoBlockingChan) SetBufferSize(blockSize uint64) {
@@ -74,6 +74,7 @@ func (nbc *NoBlockingChan) doWork() {
 		debug.FreeOSMemory()
 	}()
 
+	var freeSize uint64
 	items := list.New()
 	for {
 		if items.Len() == 0 {
@@ -94,11 +95,10 @@ func (nbc *NoBlockingChan) doWork() {
 		case <-nbc.freeMem:
 			// free too old memcached
 			item := items.Front()
-			var freeSize uint64
 			freeTime := time.Now().Unix()
 			for item != nil {
 				nItem := item.Next()
-				if (freeTime - item.Value.(noBuffferObj).used) > 300 {
+				if (freeTime - item.Value.(noBuffferObj).used) > LifeTimeChan {
 					items.Remove(item)
 					item.Value = nil
 				} else {
@@ -109,7 +109,9 @@ func (nbc *NoBlockingChan) doWork() {
 			}
 			// if needed free memory more than ThresholdFreeOsMemory, call the debug.FreeOSMemory
 			if freeSize > ThresholdFreeOsMemory {
+				fmt.Println("free debug os")
 				debug.FreeOSMemory()
+				freeSize = 0
 			}
 		}
 	}
