@@ -48,6 +48,16 @@ func NewNoBlockingBytesChan(blockSize ...int) *NoBlockingBytesChan {
 	return nbbc
 }
 
+// SendChan is the only read channel for NoBlockingBytesChan
+func (nbbc *NoBlockingBytesChan) SendChan() <-chan chan []byte {
+	return nbbc.send
+}
+
+// RecycleChan is the recycle channel for NoBlockingBytesChan
+func (nbbc *NoBlockingBytesChan) RecycleChan() chan<- chan []byte {
+	return nbbc.recv
+}
+
 // SetBufferSize used to set no blocking channel into blockSize
 func (nbbc *NoBlockingBytesChan) SetBufferSize(blockSize uint64) {
 	nbbc.blockSize = blockSize
@@ -82,7 +92,7 @@ func (nbbc *NoBlockingBytesChan) doWork() {
 			})
 		case nbbc.send <- e.Value.(noBytesObj).b:
 			items.Remove(e)
-		case <-nbc.freeMem:
+		case <-nbbc.freeMem:
 			// free too old memcached
 			item := items.Front()
 			var freeSize uint64

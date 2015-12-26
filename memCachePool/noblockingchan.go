@@ -5,6 +5,8 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+
+	"github.com/laohanlinux/go-logger/logger"
 )
 
 // ThresholdFreeOsMemory (256M) for memCache size to free to os
@@ -12,7 +14,7 @@ const (
 	ThresholdFreeOsMemory = 268435456
 )
 
-var memCacheOnce sync.Once
+var noblockOnece sync.Once
 
 var nbc *NoBlockingChan
 
@@ -35,7 +37,8 @@ type NoBlockingChan struct {
 
 // NewNoBlockingChan for create a no blocking chan bytes with size block
 func NewNoBlockingChan(blockSize ...int) *NoBlockingChan {
-	memCacheOnce.Do(func() {
+	noblockOnece.Do(func() {
+		logger.Info("do once")
 		nbc = &NoBlockingChan{
 			send:      make(chan []byte),
 			recv:      make(chan []byte),
@@ -47,6 +50,12 @@ func NewNoBlockingChan(blockSize ...int) *NoBlockingChan {
 	})
 	return nbc
 }
+
+// SendChan ...
+func (nbc *NoBlockingChan) SendChan() <-chan []byte { return nbc.send }
+
+// RecycleChan ...
+func (nbc *NoBlockingChan) RecycleChan() chan<- []byte { return nbc.recv }
 
 // SetBufferSize used to set no blocking channel into blockSize
 func (nbc *NoBlockingChan) SetBufferSize(blockSize uint64) {
