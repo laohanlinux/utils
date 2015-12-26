@@ -2,6 +2,7 @@ package memCachePool
 
 import (
 	"container/list"
+	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 // ThresholdFreeOsMemory (256M) for memCache size to free to os
 const (
 	ThresholdFreeOsMemory = 268435456
+	LifeTimeChan          = 30
 )
 
 var noblockOnece sync.Once
@@ -72,6 +74,7 @@ func (nbc *NoBlockingChan) doWork() {
 		debug.FreeOSMemory()
 	}()
 
+	var freeSize uint64
 	items := list.New()
 	for {
 		if items.Len() == 0 {
@@ -92,11 +95,10 @@ func (nbc *NoBlockingChan) doWork() {
 		case <-nbc.freeMem:
 			// free too old memcached
 			item := items.Front()
-			var freeSize uint64
 			freeTime := time.Now().Unix()
 			for item != nil {
 				nItem := item.Next()
-				if (freeTime - item.Value.(noBuffferObj).used) > 300 {
+				if (freeTime - item.Value.(noBuffferObj).used) > LifeTimeChan {
 					items.Remove(item)
 					item.Value = nil
 				} else {
@@ -107,7 +109,9 @@ func (nbc *NoBlockingChan) doWork() {
 			}
 			// if needed free memory more than ThresholdFreeOsMemory, call the debug.FreeOSMemory
 			if freeSize > ThresholdFreeOsMemory {
+				fmt.Println("free debug os")
 				debug.FreeOSMemory()
+				freeSize = 0
 			}
 		}
 	}

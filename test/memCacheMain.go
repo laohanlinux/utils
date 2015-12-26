@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
@@ -20,6 +22,10 @@ func main() {
 	memCacheObj := memCacheFactory.GetMemCachePool(NoBlockingBytesChanType, 1024)
 	m1, _ := memCacheObj.(*NoBlockingBytesChan)
 
+	go func() {
+		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	//
 	memCacheObj = memCacheFactory.GetMemCachePool(NoBlockingChanType, 1024)
 	m2, _ := memCacheObj.(*NoBlockingChan)
@@ -38,6 +44,8 @@ func main() {
 	}
 
 	gGroup.Wait()
+	fmt.Println("等待总控制进程退出")
+	time.Sleep(time.Minute * 10)
 }
 func bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	send1 := nbbc.SendChan()
@@ -52,6 +60,7 @@ func bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	for i := 0; i < currency; i++ {
 		gGroup.Add(1)
 		go func() {
+			defer gGroup.Done()
 			for {
 				select {
 				case bytes := <-c:
@@ -68,7 +77,7 @@ func bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	}
 
 	// product binary data
-	for i := 0; i < currency*1024; i++ {
+	for i := 0; i < currency; i++ {
 		b := <-send2
 		b[0] = byte(i)
 		c <- b
@@ -78,7 +87,10 @@ func bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	// 	exitChan <- i
 	// }
 	close(exitChan)
+	gGroup.Wait()
 	recycle1 <- c
+	//
+	fmt.Println("退出bench1 controller")
 }
 
 // func main() {

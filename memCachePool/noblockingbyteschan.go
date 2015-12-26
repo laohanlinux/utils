@@ -14,6 +14,7 @@ var nbbc *NoBlockingBytesChan
 // ThresholdFreeBytesChan
 const (
 	ThresholdFreeBytesChan = 268435456
+	LifeTimeBytesChan      = 30
 )
 
 //
@@ -71,6 +72,7 @@ func (nbbc *NoBlockingBytesChan) doWork() {
 		debug.FreeOSMemory()
 	}()
 
+	var freeSize uint64
 	items := list.New()
 	for {
 		if items.Len() == 0 {
@@ -95,11 +97,10 @@ func (nbbc *NoBlockingBytesChan) doWork() {
 		case <-nbbc.freeMem:
 			// free too old memcached
 			item := items.Front()
-			var freeSize uint64
 			freeTime := time.Now().Unix()
 			for item != nil {
 				nItem := item.Next()
-				if (freeTime - item.Value.(noBytesObj).used) > 300 {
+				if (freeTime - item.Value.(noBytesObj).used) > LifeTimeBytesChan {
 					items.Remove(item)
 					item.Value = nil
 				} else {
@@ -111,6 +112,7 @@ func (nbbc *NoBlockingBytesChan) doWork() {
 			// if needed free memory more than ThresholdFreeBytesChan, call the debug.FreeOSMemory
 			if freeSize > ThresholdFreeBytesChan {
 				debug.FreeOSMemory()
+				freeSize = 0
 			}
 		}
 	}
