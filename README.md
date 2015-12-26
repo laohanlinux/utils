@@ -1,1 +1,3 @@
-no block memory cache !!!
+no block memory cache !!! 
+
+some utils for me!!!
