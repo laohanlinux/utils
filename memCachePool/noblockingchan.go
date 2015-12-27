@@ -5,8 +5,6 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
-
-	"github.com/laohanlinux/go-logger/logger"
 )
 
 // ThresholdFreeOsMemory (256M) for memCache size to free to os
@@ -45,7 +43,6 @@ func NewNoBlockingChan(blockSizes ...uint64) *NoBlockingChan {
 		blockSize = 4096
 	}
 	noblockOnece.Do(func() {
-		logger.Info("do once")
 		nbc = &NoBlockingChan{
 			send:      make(chan []byte),
 			recv:      make(chan []byte),
