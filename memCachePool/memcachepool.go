@@ -1,7 +1,5 @@
 package memCachePool
 
-import "fmt"
-
 //
 const (
 	NoBlockingChanType      = 0
@@ -12,11 +10,10 @@ const (
 type MemCacheFactory struct {
 }
 
-//GetMemCachePool ....
-func (m MemCacheFactory) GetMemCachePool(memCacheType, poolSize int) MemCachePool {
+// GetMemCachePool ....
+func (m MemCacheFactory) GetMemCachePool(memCacheType, poolSize uint64) MemCachePool {
 	switch memCacheType {
 	case NoBlockingChanType:
-		fmt.Println("申请一个NoBlockingChanType的内存缓冲")
 		return NewNoBlockingChan(poolSize)
 	case NoBlockingBytesChanType:
 		return NewNoBlockingBytesChan(poolSize)
@@ -27,4 +24,5 @@ func (m MemCacheFactory) GetMemCachePool(memCacheType, poolSize int) MemCachePoo
 
 // MemCachePool is a interface for different type memecache
 type MemCachePool interface {
+	SetBufferSize(uint64)
 }

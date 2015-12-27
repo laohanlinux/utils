@@ -74,7 +74,6 @@ func TestNoBlockingBytesChan(t *testing.T) {
 	close(exitChan)
 
 	gGroup.Wait()
-	assert.Equal(t, len(c), 0)
 	c <- []byte("a")
 	//assert.Equal(t, len(c), 1)
 	recycle <- c
@@ -118,6 +117,7 @@ func Bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	for i := 0; i < currency; i++ {
 		gGroup.Add(1)
 		go func() {
+			defer gGroup.Done()
 			select {
 			case bytes := <-c:
 				//display info
@@ -131,12 +131,13 @@ func Bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	}
 
 	// product binary data
-	for i := 0; i < currency*1024; i++ {
+	for i := 0; i < currency; i++ {
 		b := <-send2
 		b[0] = byte(i)
 		c <- b
 	}
 
 	close(exitChan)
+	gGroup.Wait()
 	recycle1 <- c
 }

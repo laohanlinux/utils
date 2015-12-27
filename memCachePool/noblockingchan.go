@@ -2,7 +2,6 @@ package memCachePool
 
 import (
 	"container/list"
-	"fmt"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -13,7 +12,7 @@ import (
 // ThresholdFreeOsMemory (256M) for memCache size to free to os
 const (
 	ThresholdFreeOsMemory = 268435456
-	LifeTimeChan          = 30
+	LifeTimeChan          = 180
 )
 
 var noblockOnece sync.Once
@@ -29,7 +28,7 @@ type noBuffferObj struct {
 // NoBlockingChan is a no block channel for memory cache.
 // the recycle time is 1 minute ;
 // the recycle threshold of total memory is 268435456;
-// the recycle threshold of ervry block timeout is 5 minutes
+// the recycle threshold of ervry block timeout is 3 minutes
 type NoBlockingChan struct {
 	send      chan []byte //
 	recv      chan []byte //
@@ -38,14 +37,20 @@ type NoBlockingChan struct {
 }
 
 // NewNoBlockingChan for create a no blocking chan bytes with size block
-func NewNoBlockingChan(blockSize ...int) *NoBlockingChan {
+func NewNoBlockingChan(blockSizes ...uint64) *NoBlockingChan {
+	var blockSize uint64
+	if len(blockSizes) > 0 {
+		blockSize = blockSizes[0]
+	} else {
+		blockSize = 4096
+	}
 	noblockOnece.Do(func() {
 		logger.Info("do once")
 		nbc = &NoBlockingChan{
 			send:      make(chan []byte),
 			recv:      make(chan []byte),
 			freeMem:   make(chan byte),
-			blockSize: 1024 * 4,
+			blockSize: blockSize,
 		}
 		go nbc.doWork()
 		go nbc.freeOldMemCache()
@@ -66,8 +71,6 @@ func (nbc *NoBlockingChan) SetBufferSize(blockSize uint64) {
 
 // Very Block is 4kb
 func (nbc *NoBlockingChan) makeBuffer() []byte { return make([]byte, nbc.blockSize) }
-
-func (nbc *NoBlockingChan) bufferSize() uint64 { return 0 }
 
 func (nbc *NoBlockingChan) doWork() {
 	defer func() {
@@ -109,7 +112,6 @@ func (nbc *NoBlockingChan) doWork() {
 			}
 			// if needed free memory more than ThresholdFreeOsMemory, call the debug.FreeOSMemory
 			if freeSize > ThresholdFreeOsMemory {
-				fmt.Println("free debug os")
 				debug.FreeOSMemory()
 				freeSize = 0
 			}
@@ -117,9 +119,7 @@ func (nbc *NoBlockingChan) doWork() {
 	}
 }
 
-// free old memcache object, timeout = 1 minute not to be used
 func (nbc *NoBlockingChan) freeOldMemCache() {
-	//timeout := time.NewTimer(time.Minute * 5)
 	timeout := time.NewTicker(time.Second * 60)
 	for {
 		select {

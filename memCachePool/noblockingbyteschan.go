@@ -11,13 +11,13 @@ var bytesChanOnce sync.Once
 
 var nbbc *NoBlockingBytesChan
 
-// ThresholdFreeBytesChan
+// ThresholdFreeBytesChan is the threshold that frees memory to os.
+// LifeTimeChan is the live time of every block NoBlockingBytesChan.
 const (
 	ThresholdFreeBytesChan = 268435456
-	LifeTimeBytesChan      = 30
+	LifeTimeBytesChan      = 180
 )
 
-//
 type noBytesObj struct {
 	b    chan []byte
 	used int64
@@ -26,7 +26,7 @@ type noBytesObj struct {
 // NoBlockingBytesChan is a no block channel for memory cache.
 // the recycle time is 1 minute ;
 // the recycle threshold of total memory is 268435456;
-// the recycle threshold of ervry block timeout is 5 minutes
+// the recycle threshold of ervry block timeout is 3 minutes
 type NoBlockingBytesChan struct {
 	send      chan chan []byte //
 	recv      chan chan []byte //
@@ -35,13 +35,19 @@ type NoBlockingBytesChan struct {
 }
 
 // NewNoBlockingBytesChan for create a no blocking chan with size block
-func NewNoBlockingBytesChan(blockSize ...int) *NoBlockingBytesChan {
+func NewNoBlockingBytesChan(blockSizes ...uint64) *NoBlockingBytesChan {
+	var blockSize uint64
+	if len(blockSizes) > 0 {
+		blockSize = blockSizes[0]
+	} else {
+		blockSize = 4096
+	}
 	bytesChanOnce.Do(func() {
 		nbbc = &NoBlockingBytesChan{
 			send:      make(chan chan []byte),
 			recv:      make(chan chan []byte),
 			freeMem:   make(chan byte),
-			blockSize: 1024 * 4,
+			blockSize: blockSize,
 		}
 		go nbbc.doWork()
 		go nbbc.freeOldMemCache()
@@ -118,9 +124,7 @@ func (nbbc *NoBlockingBytesChan) doWork() {
 	}
 }
 
-// free old memcache object, timeout = 1 minute not to be used
 func (nbbc *NoBlockingBytesChan) freeOldMemCache() {
-	//timeout := time.NewTimer(time.Minute * 5)
 	timeout := time.NewTicker(time.Second * 60)
 	for {
 		select {
