@@ -9,8 +9,8 @@ import (
 
 // ThresholdFreeOsMemory (256M) for memCache size to free to os
 const (
-	ThresholdFreeOsMemory = 268435456
-	LifeTimeChan          = 180
+	ThresholdFreeNoBlockChan = 268435456
+	LifeTimeChan             = 180
 )
 
 var noblockOnece sync.Once
@@ -96,19 +96,22 @@ func (nbc *NoBlockingChan) doWork() {
 			// free too old memcached
 			item := items.Front()
 			freeTime := time.Now().Unix()
-			for item != nil {
-				nItem := item.Next()
-				if (freeTime - item.Value.(noBuffferObj).used) > LifeTimeChan {
-					items.Remove(item)
-					item.Value = nil
-				} else {
-					break
+			if items.Len() > 1 {
+				for item != nil {
+					nItem := item.Next()
+					if (freeTime - item.Value.(noBuffferObj).used) > LifeTimeChan {
+						items.Remove(item)
+						item.Value = nil
+					} else {
+						break
+					}
+					item = nItem
+					freeSize += nbc.blockSize
 				}
-				item = nItem
-				freeSize += nbc.blockSize
 			}
+
 			// if needed free memory more than ThresholdFreeOsMemory, call the debug.FreeOSMemory
-			if freeSize > ThresholdFreeOsMemory {
+			if freeSize > ThresholdFreeNoBlockChan {
 				debug.FreeOSMemory()
 				freeSize = 0
 			}

@@ -104,16 +104,18 @@ func (nbbc *NoBlockingBytesChan) doWork() {
 			// free too old memcached
 			item := items.Front()
 			freeTime := time.Now().Unix()
-			for item != nil {
-				nItem := item.Next()
-				if (freeTime - item.Value.(noBytesObj).used) > LifeTimeBytesChan {
-					items.Remove(item)
-					item.Value = nil
-				} else {
-					break
+			if items.Len() > 1 {
+				for item != nil {
+					nItem := item.Next()
+					if (freeTime - item.Value.(noBytesObj).used) > LifeTimeBytesChan {
+						items.Remove(item)
+						item.Value = nil
+					} else {
+						break
+					}
+					item = nItem
+					freeSize += nbbc.blockSize
 				}
-				item = nItem
-				freeSize += nbbc.blockSize
 			}
 			// if needed free memory more than ThresholdFreeBytesChan, call the debug.FreeOSMemory
 			if freeSize > ThresholdFreeBytesChan {
