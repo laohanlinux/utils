@@ -53,8 +53,9 @@ func (s *KGSupervisor) stop() {
 
 }
 
+// Worker ...
 type Worker interface {
-	start()
+	start(...interface{}) error
 	terminate()
 	reply()
 	noReply()
