@@ -1,3 +1,20 @@
+/*=============================================================================
+
+ Copyright (C) 2016 All rights reserved.
+
+ Author: Rg
+
+ Email: daimaldd@gmail.com
+
+ Last modified: 2016-01-28 10:32
+
+ Filename: hashtree.go
+
+ Description:
+
+=============================================================================*/
+
+//
 package datastruct
 
 import (
@@ -53,7 +70,8 @@ func (htree *HashTree) Insert(key []byte, value []byte) {
 	htree.locker.Unlock()
 }
 
-// Get ...
+// Get
+// if return nil indicate no found the key's value
 func (htree *HashTree) Get(key []byte) []byte {
 	nKey := htree.hf(key)
 	htree.locker.RLock()
@@ -130,6 +148,7 @@ func del(key HashKeyType, n *node, hp [10]HashKeyType, level int) {
 	if n.key == key {
 		n.exists = false
 		n.data = nil
+		return
 	}
 
 	idx := key % hp[level]

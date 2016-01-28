@@ -1,3 +1,20 @@
+/*=============================================================================
+
+ Copyright (C) 2016 All rights reserved.
+
+ Author: Rg
+
+ Email: daimaldd@gmail.com
+
+ Last modified: 2016-01-28 10:33
+
+ Filename: memcachepool.go
+
+ Description:
+
+=============================================================================*/
+
+//
 package memCachePool
 
 //
