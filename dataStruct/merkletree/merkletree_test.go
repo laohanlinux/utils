@@ -15,4 +15,8 @@ func TestDiff(t *testing.T) {
 
 	fmt.Println(mt1.Root, mt2)
 	mt1.DisplayMerkleTreeNodeDetail()
+	fmt.Println("===================")
+	mt2.DisplayMerkleTreeNodeDetail()
+
+	fmt.Println("mt1 is equal to mt2: ", mt1.CompareMerkleTree(mt2))
 }
