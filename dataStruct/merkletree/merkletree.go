@@ -3,6 +3,7 @@ package merkletree
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 )
 
 // MerkleTree ...
@@ -31,7 +32,6 @@ func NewMerkleTree(data []byte, pieces int) *MerkleTree {
 	for i := 0; i < pieces; i++ {
 		dataPieces = append(dataPieces, data[i*size:(i*size+1)])
 	}
-
 	mt := &MerkleTree{
 		TreeHeight: 0,
 		Root:       nil,
@@ -40,17 +40,29 @@ func NewMerkleTree(data []byte, pieces int) *MerkleTree {
 	return mt
 }
 
-/*
-func (mt *MerkleTree) DisplayMerkleTreeNodeDetail(nodes []*merkleTreeNode) {
-	for _, node := range nodes {
-		fmt.Printf("nodeHash:%s\n", node.hash)
+func (mt *MerkleTree) DisplayMerkleTreeNodeDetail() {
+	display(mt.Root)
+}
+
+func display(n *merkleTreeNode) {
+	if n == nil {
+		return
+	}
+	if n.left == nil && n.right == nil {
+		fmt.Println(n.hash)
+		return
+	}
+	if n.left != nil {
+		display(n.left)
+	}
+	if n.right != nil {
+		display(n.right)
 	}
 }
-*/
 
 // BuildMerkleTree ...
 func (mt *MerkleTree) BuildMerkleTree(data [][]byte) {
-	if mt.TreeHeight == 0 || data == nil || len(data) == 0 {
+	if data == nil || len(data) == 0 {
 		return
 	}
 
