@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/laohanlinux/memCache/kgredis"
+	"github.com/laohanlinux/utils/kgredis"
 )
 
 func doSetWork(rdpc *kgredis.RedisPoolChan) {

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/laohanlinux/go-logger/logger"
-	. "github.com/laohanlinux/memCache/memCachePool"
+	. "github.com/laohanlinux/utils/memCachePool"
 )
 
 //	"time"
