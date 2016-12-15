@@ -1,4 +1,4 @@
-package kigolog
+package gokitlog
 
 import (
 	"os"
