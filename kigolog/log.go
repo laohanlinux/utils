@@ -150,6 +150,11 @@ func Critf(args ...interface{}) {
 	os.Exit(1)
 }
 
+func Log(args ...interface{}) {
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	logPrint(tmpLog, args)
+}
+
 func Close() error {
 	if lg.ioWriter != nil {
 		return lg.ioWriter.Close()
