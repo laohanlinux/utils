@@ -8,9 +8,10 @@ import (
 
 // Snowflake init setting
 const (
-	TimestampNetRPC = "SnowflakeNetRPC.Timestamp"
-	NextIDNetRPC    = "SnowflakeNetRPC.NextID"
-	NextIDsNetRPC   = "SnowflakeNetRPC.NextIDs"
+	SnowService                = "SnowflakeNetRPC"
+	SnowServiceTimestampNetRPC = "SnowflakeNetRPC.Timestamp"
+	SnowServiceNextIDNetRPC    = "SnowflakeNetRPC.NextID"
+	SnowServiceNextIDsNetRPC   = "SnowflakeNetRPC.NextIDs"
 )
 
 // NextIDsArgs args of rpc remote call

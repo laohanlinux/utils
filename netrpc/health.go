@@ -1,6 +1,7 @@
 package netrpc
 
 const (
+	HealthCheckService    = "HealthCheck"
 	HealthCheckPingNetRPC = "HealthCheck.Ping"
 )
 
