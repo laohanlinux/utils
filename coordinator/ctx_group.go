@@ -8,10 +8,10 @@ import (
 func NewCtxGCoordinator(g *sync.WaitGroup) *CtxGCoordinator {
 	ctx := context.Background()
 	ctx, canFunc := context.WithCancel(ctx)
-
 	return &CtxGCoordinator{Ctx: ctx, CanFunc: canFunc, Group: g}
 }
 
+// CtxGCoordinator must sure one goroutine one parent or one child CtxGCoordinator object
 type CtxGCoordinator struct {
 	Ctx     context.Context
 	CanFunc context.CancelFunc

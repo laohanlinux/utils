@@ -58,3 +58,9 @@ func (w Workers) Get(ID int32) (*IDWorker, error) {
 	}
 	return worker, nil
 }
+
+func SplitWorker(workerid int32) (int32, int32) {
+	datacenter := workerid >> workerIDBits
+	worker := workerid & maxWorkerID
+	return datacenter, worker
+}
