@@ -36,7 +36,7 @@ func NewWorkers(twEpoch int64) (Workers, error) {
 	}
 	idWorkers := make(map[int32]*IDWorker)
 	maxID := -1 ^ (-1 << (workerIDBits + datacenterIDBits))
-	for idx := 0; idx < maxID; idx++ {
+	for idx := 0; idx <= maxID; idx++ {
 		datacenter := idx >> workerIDBits
 		worker := idx & maxWorkerID
 		idWorker, err := NewIDWorker(int32(worker), int32(datacenter), twEpoch)
