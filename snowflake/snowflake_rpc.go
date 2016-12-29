@@ -20,6 +20,10 @@ type NextIDsArgs struct {
 	Num int
 }
 
+type NextIDsReply struct {
+	Uids []int64
+}
+
 // NewSnowflakeNetRPC return a new snowflakenetrpc point object
 func NewSnowflakeNetRPC(workers Workers) *SnowflakeNetRPC {
 	return &SnowflakeNetRPC{workers: workers}
