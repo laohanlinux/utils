@@ -68,11 +68,12 @@ func netrpcClient() {
 		args := &Args{i, 8}
 		metaData := make(map[string]string)
 		metaData["time"] = fmt.Sprintf("%v", time.Now().UnixNano())
-		divCall := client.Go("Arith.Divide", metaData, args, quotient, nil)
-		replyCall := <-divCall.Done // will be equal to divCall
+		//divCall := client.Call("Arith.Divide", metaData, args, quotient)
+		//replyCall := <-divCall.Done // will be equal to divCall
 		// check errors, print, etc.
-		if replyCall.Error != nil {
-			log.Fatalf("err:%v", replyCall.Error)
+		err := client.Call("Arith.Divide", metaData, args, quotient)
+		if err != nil {
+			log.Fatalf("err:%v", err)
 		}
 		log.Printf("reply=>  %+v\n", quotient)
 	}
