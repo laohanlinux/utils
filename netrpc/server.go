@@ -16,9 +16,13 @@ import (
 	"sync"
 	"unicode"
 	"unicode/utf8"
+
+	"golang.org/x/net/context"
 )
 
-type HookReuqest func(*Request)
+type BeforeExcuteFunc func(*Request) context.Context
+
+type AfterExcuteFunc func(context.Context)
 
 // Precompute the reflect type for error. Can't use error directly
 // because Typeof takes an empty interface value. This is annoying.
@@ -62,13 +66,14 @@ type Response struct {
 
 // Server represents an RPC Server.
 type Server struct {
-	mu          sync.RWMutex // protects the serviceMap
-	serviceMap  map[string]*service
-	reqLock     sync.Mutex // protects freeReq
-	freeReq     *Request
-	respLock    sync.Mutex // protects freeResp
-	freeResp    *Response
-	hookReuqest HookReuqest
+	mu               sync.RWMutex // protects the serviceMap
+	serviceMap       map[string]*service
+	reqLock          sync.Mutex // protects freeReq
+	freeReq          *Request
+	respLock         sync.Mutex // protects freeResp
+	freeResp         *Response
+	beforeExcuteFunc BeforeExcuteFunc
+	afterExcuteFunc  AfterExcuteFunc
 }
 
 // Is this an exported - upper case - name?
@@ -122,8 +127,12 @@ func (s *Server) Accept(lis net.Listener) {
 	}
 }
 
-func (s *Server) SetHookRequest(f HookReuqest) {
-	s.hookReuqest = f
+func (s *Server) SetBeforeExcuteFunc(f BeforeExcuteFunc) {
+	s.beforeExcuteFunc = f
+}
+
+func (s *Server) SetAfterExcuteFunc(f AfterExcuteFunc) {
+	s.afterExcuteFunc = f
 }
 
 func (s *Server) serverConn(conn io.ReadWriteCloser) {
@@ -200,14 +209,14 @@ func suitableMethods(typ reflect.Type, reportErr bool) map[string]*methodType {
 			continue
 		}
 		// Method needs three ins: receiver, *args, *reply.
-		if mtype.NumIn() != 3 {
+		if mtype.NumIn() != 4 {
 			if reportErr {
 				log.Println("method", mname, "has wrong number of ins:", mtype.NumIn())
 			}
 			continue
 		}
 		// First arg need not be a pointer.
-		argType := mtype.In(1)
+		argType := mtype.In(2)
 		if !isExportedOrBuiltinType(argType) {
 			if reportErr {
 				log.Println(mname, "argument type not exported:", argType)
@@ -215,7 +224,7 @@ func suitableMethods(typ reflect.Type, reportErr bool) map[string]*methodType {
 			continue
 		}
 		// Second arg must be a pointer.
-		replyType := mtype.In(2)
+		replyType := mtype.In(3)
 		if replyType.Kind() != reflect.Ptr {
 			if reportErr {
 				log.Println("method", mname, "reply type not a pointer:", replyType)
@@ -278,13 +287,18 @@ func (m *methodType) NumCalls() (n uint) {
 	return n
 }
 
-func (s *service) call(server *Server, sending *sync.Mutex, mtype *methodType, req *Request, argv, replyv reflect.Value, codec ServerCodec) {
+func (s *service) call(ctx context.Context, afterExcuteFunc AfterExcuteFunc,
+	server *Server, sending *sync.Mutex, mtype *methodType,
+	req *Request, argv, replyv reflect.Value, codec ServerCodec) {
 	mtype.Lock()
 	mtype.numCalls++
 	mtype.Unlock()
 	function := mtype.method.Func
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	// Invoke the method, providing a new value for the reply.
-	returnValues := function.Call([]reflect.Value{s.rcvr, argv, replyv})
+	returnValues := function.Call([]reflect.Value{s.rcvr, reflect.ValueOf(ctx), argv, replyv})
 	// The return value for the method is an error.
 	errInter := returnValues[0].Interface()
 	errmsg := ""
@@ -293,6 +307,10 @@ func (s *service) call(server *Server, sending *sync.Mutex, mtype *methodType, r
 	}
 	server.sendResponse(sending, req, replyv.Interface(), codec, errmsg)
 	server.freeRequest(req)
+
+	if afterExcuteFunc != nil {
+		afterExcuteFunc(ctx)
+	}
 }
 
 func (server *Server) ServeConn(conn io.ReadWriteCloser) {
@@ -312,27 +330,32 @@ func (server *Server) ServeCodec(codec ServerCodec) {
 	sending := new(sync.Mutex)
 	for {
 		service, mtype, req, argv, replyv, keepReading, err := server.readRequest(codec)
+		var ctx context.Context
 		if err != nil {
+			if server.beforeExcuteFunc != nil {
+				ctx = server.beforeExcuteFunc(req)
+			}
 			if debugLog && err != io.EOF {
 				log.Println("rpc:", err)
 			}
+			if server.afterExcuteFunc != nil {
+				server.afterExcuteFunc(ctx)
+			}
+
 			if !keepReading {
 				break
 			}
 			// send a response if we actually managed to read a header.
 			if req != nil {
-				if server.hookReuqest != nil {
-					server.hookReuqest(req)
-				}
 				server.sendResponse(sending, req, invalidRequest, codec, err.Error())
 				server.freeRequest(req)
 			}
 			continue
 		}
-		if server.hookReuqest != nil {
-			server.hookReuqest(req)
+		if server.beforeExcuteFunc != nil {
+			ctx = server.beforeExcuteFunc(req)
 		}
-		go service.call(server, sending, mtype, req, argv, replyv, codec)
+		go service.call(ctx, server.afterExcuteFunc, server, sending, mtype, req, argv, replyv, codec)
 	}
 	codec.Close()
 }
@@ -342,24 +365,22 @@ func (server *Server) ServeCodec(codec ServerCodec) {
 func (server *Server) ServeRequest(codec ServerCodec) error {
 	sending := new(sync.Mutex)
 	service, mtype, req, argv, replyv, keepReading, err := server.readRequest(codec)
+	var ctx context.Context
+	if server.beforeExcuteFunc != nil {
+		ctx = server.beforeExcuteFunc(req)
+	}
 	if err != nil {
 		if !keepReading {
 			return err
 		}
 		// send a response if we actually managed to read a header.
 		if req != nil {
-			if server.hookReuqest != nil {
-				server.hookReuqest(req)
-			}
 			server.sendResponse(sending, req, invalidRequest, codec, err.Error())
 			server.freeRequest(req)
 		}
 		return err
 	}
-	if server.hookReuqest != nil {
-		server.hookReuqest(req)
-	}
-	service.call(server, sending, mtype, req, argv, replyv, codec)
+	service.call(ctx, server.afterExcuteFunc, server, sending, mtype, req, argv, replyv, codec)
 	return nil
 }
 

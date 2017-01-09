@@ -7,6 +7,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 type Args struct {
@@ -19,12 +21,12 @@ type Quotient struct {
 
 type Arith int
 
-func (t *Arith) Multiply(args *Args, reply *int) error {
+func (t Arith) Multiply(ctx context.Context, args *Args, reply *int) error {
 	*reply = args.A * args.B
 	return nil
 }
 
-func (t *Arith) Divide(args *Args, quo *Quotient) error {
+func (t Arith) Divide(ctx context.Context, args *Args, quo *Quotient) error {
 	if args.B == 0 {
 		return errors.New("divide by zero")
 	}
@@ -41,11 +43,7 @@ func netrpcServer() {
 	}
 	defer l.Close()
 	server := NewServer()
-	server.Register(arith)
-	f := func(req *Request) {
-		log.Printf("HookReuqest:%+v\n", req.MetaData)
-	}
-	server.SetHookRequest(f)
+	server.Register(*arith)
 	server.Accept(l)
 }
 
@@ -58,10 +56,6 @@ func netrpcClient() {
 
 	codec := NewGoClientCodec(conn)
 	client := NewClientWithCodec(codec)
-	f := func(resp *Response) {
-		log.Printf("hookReuqest=> %+v", resp.MetaData)
-	}
-	client.SetHookResponse(f)
 	// Asynchronous call
 	quotient := new(Quotient)
 	for i := 0; i < 10; i++ {

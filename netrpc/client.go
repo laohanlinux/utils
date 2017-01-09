@@ -18,8 +18,6 @@ import (
 // the remote side of the RPC connection.
 type ServerError string
 
-type HookResponse func(*Response)
-
 func (e ServerError) Error() string {
 	return string(e)
 }
@@ -45,12 +43,11 @@ type Client struct {
 	reqMutex sync.Mutex // protects following
 	request  Request
 
-	mutex        sync.Mutex // protects following
-	seq          uint64
-	pending      map[uint64]*Call
-	closing      bool // user has called Close
-	shutdown     bool // server has told us to stop
-	hookResponse HookResponse
+	mutex    sync.Mutex // protects following
+	seq      uint64
+	pending  map[uint64]*Call
+	closing  bool // user has called Close
+	shutdown bool // server has told us to stop
 }
 
 // A ClientCodec implements writing of RPC requests and
@@ -112,9 +109,6 @@ func (client *Client) input() {
 		err = client.codec.ReadResponseHeader(&response)
 		if err != nil {
 			break
-		}
-		if client.hookResponse != nil {
-			client.hookResponse(&response)
 		}
 		seq := response.Seq
 		client.mutex.Lock()
@@ -215,10 +209,6 @@ func Dial(network, address string) (*Client, error) {
 		return nil, err
 	}
 	return NewClient(conn), nil
-}
-
-func (client *Client) SetHookResponse(f HookResponse) {
-	client.hookResponse = f
 }
 
 // Close calls the underlying codec's Close method. If the connection is already
