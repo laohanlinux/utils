@@ -28,7 +28,6 @@ func (gsc *GobServerCodec) GetReplyMetaData() interface{} {
 }
 
 func (gsc *GobServerCodec) ReadRequestHeader(r *Request) error {
-	log.Printf("Server ReadRequestHeader:%v\n", r)
 	return gsc.dec.Decode(r)
 }
 

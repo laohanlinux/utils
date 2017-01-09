@@ -332,7 +332,7 @@ func (server *Server) ServeCodec(codec ServerCodec) {
 		service, mtype, req, argv, replyv, keepReading, err := server.readRequest(codec)
 		var ctx context.Context
 		if err != nil {
-			if server.beforeExcuteFunc != nil {
+			if server.beforeExcuteFunc != nil && req != nil && req.MetaData != nil {
 				ctx = server.beforeExcuteFunc(req)
 			}
 			if debugLog && err != io.EOF {
@@ -352,7 +352,7 @@ func (server *Server) ServeCodec(codec ServerCodec) {
 			}
 			continue
 		}
-		if server.beforeExcuteFunc != nil {
+		if server.beforeExcuteFunc != nil && req != nil && req.MetaData != nil {
 			ctx = server.beforeExcuteFunc(req)
 		}
 		go service.call(ctx, server.afterExcuteFunc, server, sending, mtype, req, argv, replyv, codec)
@@ -366,7 +366,7 @@ func (server *Server) ServeRequest(codec ServerCodec) error {
 	sending := new(sync.Mutex)
 	service, mtype, req, argv, replyv, keepReading, err := server.readRequest(codec)
 	var ctx context.Context
-	if server.beforeExcuteFunc != nil {
+	if server.beforeExcuteFunc != nil && req != nil && req.MetaData != nil {
 		ctx = server.beforeExcuteFunc(req)
 	}
 	if err != nil {

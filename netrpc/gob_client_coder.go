@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/gob"
 	"io"
-	"log"
 )
 
 func NewGoClientCodec(conn io.ReadWriteCloser) *GobClientCodec {
@@ -38,9 +37,6 @@ func (gcc *GobClientCodec) WriteRequest(r *Request, body interface{}) (err error
 }
 
 func (gcc *GobClientCodec) ReadResponseHeader(r *Response) error {
-	defer func() {
-		log.Printf("client: read response header:[%+v]\n", *r)
-	}()
 	return gcc.dec.Decode(r)
 }
 
