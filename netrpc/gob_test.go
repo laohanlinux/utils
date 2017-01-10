@@ -37,7 +37,7 @@ func (t Arith) Divide(ctx context.Context, args *Args, quo *Quotient) error {
 
 func netrpcServer() {
 	arith := new(Arith)
-	l, e := net.Listen("tcp", ":1234")
+	l, e := net.Listen("tcp", ":12345")
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
@@ -48,7 +48,7 @@ func netrpcServer() {
 }
 
 func netrpcClient() {
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:1234", time.Second)
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:12345", time.Second)
 	if err != nil {
 		log.Fatalf("err:%v", err)
 	}

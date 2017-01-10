@@ -47,21 +47,21 @@ type service struct {
 // but documented here as an aid to debugging, such as when analyzing
 // network traffic.
 type Request struct {
-	ServiceMethod string            // format: "Service.Method"
-	Seq           uint64            // sequence number chosen by client
-	MetaData      map[string]string // client request metadata
-	next          *Request          // for free list in Server
+	ServiceMethod string         // format: "Service.Method"
+	Seq           uint64         // sequence number chosen by client
+	MetaData      NetRPCMetaData // client request metadata
+	next          *Request       // for free list in Server
 }
 
 // Response is a header written before every RPC return. It is used internally
 // but documented here as an aid to debugging, such as when analyzing
 // network traffic.
 type Response struct {
-	ServiceMethod string            // echoes that of the Request
-	Seq           uint64            // echoes that of the request
-	MetaData      map[string]string //
-	Error         string            // error, if any.
-	next          *Response         // for free list in Server
+	ServiceMethod string         // echoes that of the Request
+	Seq           uint64         // echoes that of the request
+	MetaData      NetRPCMetaData //
+	Error         string         // error, if any.
+	next          *Response      // for free list in Server
 }
 
 // Server represents an RPC Server.
@@ -424,7 +424,8 @@ func (server *Server) freeResponse(resp *Response) {
 	server.respLock.Unlock()
 }
 
-func (server *Server) readRequest(codec ServerCodec) (service *service, mtype *methodType, req *Request, argv, replyv reflect.Value, keepReading bool, err error) {
+func (server *Server) readRequest(codec ServerCodec) (service *service, mtype *methodType,
+	req *Request, argv, replyv reflect.Value, keepReading bool, err error) {
 	service, mtype, req, keepReading, err = server.readRequestHeader(codec)
 	if err != nil {
 		if !keepReading {
@@ -455,7 +456,8 @@ func (server *Server) readRequest(codec ServerCodec) (service *service, mtype *m
 	return
 }
 
-func (server *Server) readRequestHeader(codec ServerCodec) (service *service, mtype *methodType, req *Request, keepReading bool, err error) {
+func (server *Server) readRequestHeader(codec ServerCodec) (
+	service *service, mtype *methodType, req *Request, keepReading bool, err error) {
 	// Grab the request header.
 	req = server.getRequest()
 	err = codec.ReadRequestHeader(req)
