@@ -1,6 +1,8 @@
 package netrpc
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log"
@@ -32,12 +34,26 @@ func (t Arith) Divide(ctx context.Context, args *Args, quo *Quotient) error {
 	}
 	quo.Quo = args.A / args.B
 	quo.Rem = args.A % args.B
+
+	var network bytes.Buffer
+	enc := gob.NewEncoder(&network)
+	dec := gob.NewDecoder(&network)
+	// encoding
+	if err := enc.Encode(quo); err != nil {
+		log.Fatal("err", err)
+	}
+	// decoding
+	quo.Quo, quo.Rem = 0, 0
+	if err := dec.Decode(quo); err != nil {
+		log.Fatal("err", err)
+	}
+	log.Printf("[quo:%v]", *quo)
 	return nil
 }
 
 func netrpcServer() {
 	arith := new(Arith)
-	l, e := net.Listen("tcp", ":12345")
+	l, e := net.Listen("tcp", "127.0.0.1:12345")
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
