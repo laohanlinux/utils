@@ -60,6 +60,7 @@ func netrpcServer() {
 	defer l.Close()
 	server := NewServer()
 	server.Register(*arith)
+	server.Register(&HealthCheck{})
 	server.Accept(l)
 }
 
