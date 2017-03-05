@@ -39,6 +39,23 @@ func NewNetRPCRing(opts []NetRPCRingOpt) (*NetRPCRing, error) {
 	return &NetRPCRing{idx: 0, pool: ccs, test: opts[0].test}, nil
 }
 
+func AddClient(netWork, hostPort string, ring *NetRPCRing) error {
+	var (
+		err error
+		cc  *NetrpcClient
+		ccs []*netrpcClients
+	)
+	cc, err = newNetRPCClient(netWork, hostPort, len(ring.pool[0].sources))
+	if err != nil {
+		return err
+	}
+
+	ccs = append(ccs, ring.pool...)
+	ccs = append(ccs, cc)
+	ring.pool = ccs
+	return nil
+}
+
 type NetRPCRingOpt struct {
 	NetWork  string
 	Addr     string
