@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	level "github.com/go-kit/kit/log/experimental_level"
-	"github.com/go-kit/kit/log/levels"
+	levels "github.com/go-kit/kit/log/deprecated_levels"
+	"github.com/go-kit/kit/log/level"
+
 	"github.com/laohanlinux/assert"
 )
 
@@ -28,13 +29,13 @@ func TestGoKitLogger(t *testing.T) {
 	lg, err := NewGoKitLogger(opt)
 	assert.Nil(t, err)
 	assert.NotNil(t, lg)
-	lg.Crit().Log("testElement", time.Now().String())
+	// Crit("testElement", time.Now().String())
 	lg.Close()
 
 	SetGlobalLog(opt)
 	for i := 0; i < 1024; i++ {
 		Info(i, i)
-		Infof("i:%d", i)
+		Infof("i:%v", i)
 	}
 	Info()
 	Infof()
@@ -59,7 +60,10 @@ func TestGoKitLogWriter(t *testing.T) {
 	levelSets := strings.Split(opt.LogLevel, "|")
 	lg, err := NewLogWriter(opt)
 	defer lg.Close()
-	logger := level.New(log.NewJSONLogger(lg), level.Config{Allowed: levelSets})
+
+	//logger := level.New(log.NewJSONLogger(lg), level.Config{Allowed: levelSets})
+	logger := level.NewFilter(log.NewJSONLogger(lg), WrapLogLevel(levelSets)...)
+
 	logger = log.NewContext(logger).With("caller", log.Caller(5))
 	logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC)
 

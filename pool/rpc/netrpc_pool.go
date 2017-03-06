@@ -42,10 +42,10 @@ func NewNetRPCRing(opts []NetRPCRingOpt) (*NetRPCRing, error) {
 func AddClient(netWork, hostPort string, ring *NetRPCRing) error {
 	var (
 		err error
-		cc  *NetrpcClient
+		cc  *netrpcClients
 		ccs []*netrpcClients
 	)
-	cc, err = newNetRPCClient(netWork, hostPort, len(ring.pool[0].sources))
+	cc, err = newrpcClients(netWork, hostPort, len(ring.pool[0].sources))
 	if err != nil {
 		return err
 	}

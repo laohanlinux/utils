@@ -7,8 +7,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	level "github.com/go-kit/kit/log/experimental_level"
-	"github.com/go-kit/kit/log/levels"
+	"github.com/go-kit/kit/log/level"
 )
 
 const (
@@ -20,13 +19,15 @@ func init() {
 	tmpLog := log.NewJSONLogger(os.Stdout)
 	tmpLog = log.NewContext(tmpLog).With("caller", log.DefaultCaller)
 	tmpLog = log.NewContext(tmpLog).With("ts", log.DefaultTimestampUTC)
-	tmpLog = level.New(tmpLog, level.Config{Allowed: []string{"warn", "info", "debug", "error", "crit"}})
+
+	//tmpLog = level.New(tmpLog, level.Config{Allowed: []string{"warn", "info", "debug", "error", "crit"}})
+	tmpLog = level.NewFilter(tmpLog, level.AllowAll())
 	tmpLog = log.NewSyncLogger(tmpLog)
-	levelslog := levels.New(tmpLog)
+	// levelslog := levels.New(tmpLog)
 
 	lg = &GoKitLogger{
-		Logger:   tmpLog,
-		Levels:   &levelslog,
+		Logger: tmpLog,
+		//Levels:   &levelslog,
 		ioWriter: nil,
 		sync:     true,
 	}
@@ -41,12 +42,28 @@ func NewGoKitLogger(opt LogOption) (*GoKitLogger, error) {
 	tmpLog := log.NewJSONLogger(ioWriter)
 	tmpLog = log.NewContext(tmpLog).With("caller", log.DefaultCaller)
 	tmpLog = log.NewContext(tmpLog).With("ts", log.DefaultTimestampUTC)
-	tmpLog = level.New(tmpLog, level.Config{Allowed: levelsSets})
+	//tmpLog = level.New(tmpLog, level.Config{Allowed: levelsSets})
+
+	var gokitOpts []level.Option
+	for _, logLevel := range levelsSets {
+		switch logLevel {
+		case "info":
+			gokitOpts = append(gokitOpts, level.AllowInfo())
+		case "debug":
+			gokitOpts = append(gokitOpts, level.AllowDebug())
+		case "warn":
+			gokitOpts = append(gokitOpts, level.AllowWarn())
+		case "error":
+			gokitOpts = append(gokitOpts, level.AllowError())
+		}
+	}
+	tmpLog = level.NewFilter(tmpLog, gokitOpts...)
+
 	if opt.Sync {
 		tmpLog = log.NewSyncLogger(tmpLog)
 	}
-	levellog := levels.New(tmpLog)
-	return &GoKitLogger{Levels: &levellog, Logger: tmpLog}, nil
+	//levellog := levels.New(tmpLog)
+	return &GoKitLogger{Logger: tmpLog}, nil
 }
 
 func GlobalLog() *GoKitLogger {
@@ -63,7 +80,7 @@ func SetGlobalLog(opt LogOption) {
 	lg = tmpLog
 }
 
-func SetGlobalLogWithLog(logger log.Logger, levelConf ...level.Config) {
+func SetGlobalLogWithLog(logger log.Logger, levelConf ...level.Option) {
 	ioWriter := lg.ioWriter
 	defer func() {
 		if ioWriter != nil {
@@ -71,20 +88,23 @@ func SetGlobalLogWithLog(logger log.Logger, levelConf ...level.Config) {
 		}
 	}()
 	lg.Logger = log.NewContext(logger).With("caller", log.Caller(CallerNum))
-	var levelLog levels.Levels
+	//var levelLog levels.Levels
 	if len(levelConf) > 0 {
-		levelLog = levels.New(level.New(lg.Logger, levelConf[0]), nil)
+
+		//levelLog = levels.New(level.New(lg.Logger, levelConf[0]), nil)
+		lg.Logger = level.NewFilter(lg.Logger, levelConf[0])
 	} else {
-		levelLog = levels.New(lg.Logger, nil)
+		// lg.Logger = levels.New(lg.Logger, nil)
+		lg.Logger = level.NewFilter(lg.Logger, levelConf[0])
 	}
-	lg.Levels = &levelLog
+	//lg.Levels = &levelLog
 }
 
 var lg *GoKitLogger
 
 type GoKitLogger struct {
 	log.Logger
-	*levels.Levels
+	// *levels.Levels
 	ioWriter *LogWriter
 	sync     bool
 }
@@ -97,56 +117,54 @@ func (gklog *GoKitLogger) Close() error {
 }
 
 func Debug(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Debug()).With("caller",
-		log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrint(tmpLog, args)
 }
 
 func Debugf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Debug()).With("caller",
-		log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrintf(tmpLog, args)
 }
 
 func Info(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Info()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrint(tmpLog, args)
 }
 
 func Infof(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Info()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrintf(tmpLog, args)
 }
 
 func Warn(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Warn()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrint(tmpLog, args)
 }
 
 func Warnf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Warn()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrintf(tmpLog, args)
 }
 
 func Error(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Error()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrint(tmpLog, args)
 }
 
 func Errorf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Error()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrintf(tmpLog, args)
 }
 
 func Crit(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Crit()).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
 	logPrint(tmpLog, args)
 	os.Exit(1)
 }
 
 func Critf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Levels.Crit()).With("caller", log.Caller(CallerNum))
-	logPrintf(tmpLog, args)
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	logPrint(tmpLog, args)
 	os.Exit(1)
 }
 
@@ -160,6 +178,23 @@ func Close() error {
 		return lg.ioWriter.Close()
 	}
 	return nil
+}
+
+func WrapLogLevel(levelsSets []string) []level.Option {
+	var gokitOpts []level.Option
+	for _, logLevel := range levelsSets {
+		switch logLevel {
+		case "info":
+			gokitOpts = append(gokitOpts, level.AllowInfo())
+		case "debug":
+			gokitOpts = append(gokitOpts, level.AllowDebug())
+		case "warn":
+			gokitOpts = append(gokitOpts, level.AllowWarn())
+		case "error":
+			gokitOpts = append(gokitOpts, level.AllowError())
+		}
+	}
+	return gokitOpts
 }
 
 type LogOption struct {
@@ -237,26 +272,25 @@ func (lw *LogWriter) renameLogFile() error {
 	return nil
 }
 
-func logPrint(logger log.Logger, args interface{}) {
-	tmpArgs, _ := args.([]interface{})
-	if tmpArgs == nil || len(tmpArgs) == 0 {
+func logPrint(logger log.Logger, args []interface{}) {
+	if args == nil || len(args) == 0 {
 		logger.Log()
 		return
 	}
-	logger.Log(tmpArgs...)
+	logger.Log(args...)
 }
 
-func logPrintf(logger log.Logger, args interface{}) {
-	tmpArgs, _ := args.([]interface{})
-	if tmpArgs == nil || len(tmpArgs) == 0 {
+func logPrintf(logger log.Logger, args []interface{}) {
+	if args == nil || len(args) == 0 {
 		logger.Log("msg")
 		return
 	}
-	if len(tmpArgs) == 1 {
-		logger.Log("msg", fmt.Sprintf("%s", tmpArgs[0]))
+	if len(args) == 1 {
+		logger.Log("msg", fmt.Sprintf("%s", args[0]))
 		return
 	}
-
-	msgContent := fmt.Sprintf(fmt.Sprintf("%v", tmpArgs[0]), tmpArgs[1:]...)
+	// fmt.Println(args)
+	logFormat := fmt.Sprintf("%v", args[0])
+	msgContent := fmt.Sprintf(logFormat, args[1:]...)
 	logger.Log("msg", msgContent)
 }
