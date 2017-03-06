@@ -20,14 +20,11 @@ func init() {
 	tmpLog = log.NewContext(tmpLog).With("caller", log.DefaultCaller)
 	tmpLog = log.NewContext(tmpLog).With("ts", log.DefaultTimestampUTC)
 
-	//tmpLog = level.New(tmpLog, level.Config{Allowed: []string{"warn", "info", "debug", "error", "crit"}})
 	tmpLog = level.NewFilter(tmpLog, level.AllowAll())
 	tmpLog = log.NewSyncLogger(tmpLog)
-	// levelslog := levels.New(tmpLog)
 
 	lg = &GoKitLogger{
-		Logger: tmpLog,
-		//Levels:   &levelslog,
+		Logger:   tmpLog,
 		ioWriter: nil,
 		sync:     true,
 	}
@@ -38,31 +35,28 @@ func NewGoKitLogger(opt LogOption) (*GoKitLogger, error) {
 	if err != nil {
 		return nil, err
 	}
-	levelsSets := strings.Split(opt.LogLevel, "|")
 	tmpLog := log.NewJSONLogger(ioWriter)
 	tmpLog = log.NewContext(tmpLog).With("caller", log.DefaultCaller)
 	tmpLog = log.NewContext(tmpLog).With("ts", log.DefaultTimestampUTC)
-	//tmpLog = level.New(tmpLog, level.Config{Allowed: levelsSets})
 
-	var gokitOpts []level.Option
-	for _, logLevel := range levelsSets {
-		switch logLevel {
-		case "info":
-			gokitOpts = append(gokitOpts, level.AllowInfo())
-		case "debug":
-			gokitOpts = append(gokitOpts, level.AllowDebug())
-		case "warn":
-			gokitOpts = append(gokitOpts, level.AllowWarn())
-		case "error":
-			gokitOpts = append(gokitOpts, level.AllowError())
-		}
+	var gokitOpt level.Option
+	switch strings.ToLower(opt.LogLevel) {
+	case "info":
+		gokitOpt = level.AllowInfo()
+	case "debug":
+		gokitOpt = level.AllowDebug()
+	case "warn":
+		gokitOpt = level.AllowWarn()
+	case "error", "crit":
+		gokitOpt = level.AllowError()
+	default:
+		panic(fmt.Sprintf("logLevel(%s) no in [info|debug|warn|error]", opt.LogLevel))
 	}
-	tmpLog = level.NewFilter(tmpLog, gokitOpts...)
+	tmpLog = level.NewFilter(tmpLog, gokitOpt)
 
 	if opt.Sync {
 		tmpLog = log.NewSyncLogger(tmpLog)
 	}
-	//levellog := levels.New(tmpLog)
 	return &GoKitLogger{Logger: tmpLog}, nil
 }
 
@@ -70,8 +64,8 @@ func GlobalLog() *GoKitLogger {
 	return lg
 }
 
+// it not thread saftly
 func SetGlobalLog(opt LogOption) {
-	//close old logger io writer
 	Close()
 	tmpLog, err := NewGoKitLogger(opt)
 	if err != nil {
@@ -80,6 +74,7 @@ func SetGlobalLog(opt LogOption) {
 	lg = tmpLog
 }
 
+// SetGlobalLogWithLog set global logger with args logger
 func SetGlobalLogWithLog(logger log.Logger, levelConf ...level.Option) {
 	ioWriter := lg.ioWriter
 	defer func() {
@@ -87,17 +82,13 @@ func SetGlobalLogWithLog(logger log.Logger, levelConf ...level.Option) {
 			ioWriter.Close()
 		}
 	}()
+	// new logger has a new ioWriter
 	lg.Logger = log.NewContext(logger).With("caller", log.Caller(CallerNum))
-	//var levelLog levels.Levels
 	if len(levelConf) > 0 {
-
-		//levelLog = levels.New(level.New(lg.Logger, levelConf[0]), nil)
 		lg.Logger = level.NewFilter(lg.Logger, levelConf[0])
 	} else {
-		// lg.Logger = levels.New(lg.Logger, nil)
 		lg.Logger = level.NewFilter(lg.Logger, levelConf[0])
 	}
-	//lg.Levels = &levelLog
 }
 
 var lg *GoKitLogger
@@ -117,53 +108,53 @@ func (gklog *GoKitLogger) Close() error {
 }
 
 func Debug(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.DebugValue())
 	logPrint(tmpLog, args)
 }
 
 func Debugf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.DebugValue())
 	logPrintf(tmpLog, args)
 }
 
 func Info(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).WithPrefix("caller", log.Caller(CallerNum), "level", level.InfoValue())
 	logPrint(tmpLog, args)
 }
 
 func Infof(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).WithPrefix("caller", log.Caller(CallerNum), "level", level.InfoValue())
 	logPrintf(tmpLog, args)
 }
 
 func Warn(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.WarnValue())
 	logPrint(tmpLog, args)
 }
 
 func Warnf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.WarnValue())
 	logPrintf(tmpLog, args)
 }
 
 func Error(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrint(tmpLog, args)
 }
 
 func Errorf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrintf(tmpLog, args)
 }
 
 func Crit(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrint(tmpLog, args)
 	os.Exit(1)
 }
 
 func Critf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrint(tmpLog, args)
 	os.Exit(1)
 }

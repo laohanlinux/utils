@@ -15,6 +15,11 @@ import (
 	"github.com/laohanlinux/assert"
 )
 
+func TestFirst(t *testing.T) {
+	tmpLog := log.NewContext(log.NewJSONLogger(os.Stdout)).WithPrefix("caller", CallerNum, "level", level.InfoValue())
+	tmpLog.Log("hello", "good")
+}
+
 func TestGoKitLogger(t *testing.T) {
 	logDir, err := os.Getwd()
 	assert.Nil(t, err)
@@ -22,14 +27,13 @@ func TestGoKitLogger(t *testing.T) {
 		LogDir:                logDir,
 		SegmentationThreshold: 1,
 		LogName:               "test",
-		LogLevel:              "info|warn|error|debug|crit",
+		LogLevel:              "info",
 	}
-
+	os.Remove(logDir + "/" + "test.log")
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	lg, err := NewGoKitLogger(opt)
 	assert.Nil(t, err)
 	assert.NotNil(t, lg)
-	// Crit("testElement", time.Now().String())
 	lg.Close()
 
 	SetGlobalLog(opt)
@@ -37,11 +41,11 @@ func TestGoKitLogger(t *testing.T) {
 		Info(i, i)
 		Infof("i:%v", i)
 	}
-	Info()
-	Infof()
-	Infof("%d")
-	Infof("%d", "dddd")
 	Infof("%d", 1023)
+	Debug("test", time.Now().Unix())
+	Debug("test", time.Now().Unix())
+	Debug("test", time.Now().Unix())
+	GlobalLog().Log("log", "log")
 	Crit("exit", true)
 }
 
@@ -52,7 +56,7 @@ func TestGoKitLogWriter(t *testing.T) {
 		LogDir:                logDir,
 		SegmentationThreshold: 1,
 		LogName:               "test",
-		LogLevel:              "warn|error",
+		LogLevel:              "warn",
 	}
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -60,8 +64,6 @@ func TestGoKitLogWriter(t *testing.T) {
 	levelSets := strings.Split(opt.LogLevel, "|")
 	lg, err := NewLogWriter(opt)
 	defer lg.Close()
-
-	//logger := level.New(log.NewJSONLogger(lg), level.Config{Allowed: levelSets})
 	logger := level.NewFilter(log.NewJSONLogger(lg), WrapLogLevel(levelSets)...)
 
 	logger = log.NewContext(logger).With("caller", log.Caller(5))
@@ -105,5 +107,4 @@ func TestLogWriter(t *testing.T) {
 		lg.Write([]byte(strconv.Itoa(i)))
 		time.Sleep(time.Second)
 	}
-
 }
