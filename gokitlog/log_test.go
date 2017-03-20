@@ -16,7 +16,7 @@ import (
 )
 
 func TestFirst(t *testing.T) {
-	tmpLog := log.NewContext(log.NewJSONLogger(os.Stdout)).WithPrefix("caller", CallerNum, "level", level.InfoValue())
+	tmpLog := log.With(log.NewJSONLogger(os.Stdout), "caller", CallerNum, "level", level.InfoValue())
 	tmpLog.Log("hello", "good")
 }
 
@@ -66,8 +66,8 @@ func TestGoKitLogWriter(t *testing.T) {
 	defer lg.Close()
 	logger := level.NewFilter(log.NewJSONLogger(lg), WrapLogLevel(levelSets)...)
 
-	logger = log.NewContext(logger).With("caller", log.Caller(5))
-	logger = log.NewContext(logger).With("ts", log.DefaultTimestampUTC)
+	logger = log.With(logger, "caller", log.Caller(5))
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 
 	// swap logger saftly
 	logger = log.NewSyncLogger(logger)
@@ -79,7 +79,7 @@ func TestGoKitLogWriter(t *testing.T) {
 			if gid%2 == 0 {
 				tmpLog = levelLog.Info()
 			}
-			tmpLog = log.NewContext(tmpLog).With("gorutine", gid)
+			tmpLog = log.With(tmpLog, "gorutine", gid)
 			for {
 				tmpLog.Log("msg", time.Now().Unix())
 				//time.Sleep(time.Second)

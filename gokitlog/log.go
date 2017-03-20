@@ -17,8 +17,8 @@ const (
 
 func init() {
 	tmpLog := log.NewJSONLogger(os.Stdout)
-	tmpLog = log.NewContext(tmpLog).With("caller", log.DefaultCaller)
-	tmpLog = log.NewContext(tmpLog).With("ts", log.DefaultTimestampUTC)
+	tmpLog = log.With(tmpLog, "caller", log.DefaultCaller)
+	tmpLog = log.With(tmpLog, "ts", log.DefaultTimestampUTC)
 
 	tmpLog = level.NewFilter(tmpLog, level.AllowAll())
 	tmpLog = log.NewSyncLogger(tmpLog)
@@ -36,8 +36,8 @@ func NewGoKitLogger(opt LogOption) (*GoKitLogger, error) {
 		return nil, err
 	}
 	tmpLog := log.NewJSONLogger(ioWriter)
-	tmpLog = log.NewContext(tmpLog).With("caller", log.DefaultCaller)
-	tmpLog = log.NewContext(tmpLog).With("ts", log.DefaultTimestampUTC)
+	tmpLog = log.With(tmpLog, "caller", log.DefaultCaller)
+	tmpLog = log.With(tmpLog, "ts", log.DefaultTimestampUTC)
 
 	var gokitOpt level.Option
 	switch strings.ToLower(opt.LogLevel) {
@@ -83,7 +83,7 @@ func SetGlobalLogWithLog(logger log.Logger, levelConf ...level.Option) {
 		}
 	}()
 	// new logger has a new ioWriter
-	lg.Logger = log.NewContext(logger).With("caller", log.Caller(CallerNum))
+	lg.Logger = log.With(logger, "caller", log.Caller(CallerNum))
 	if len(levelConf) > 0 {
 		lg.Logger = level.NewFilter(lg.Logger, levelConf[0])
 	} else {
@@ -108,59 +108,59 @@ func (gklog *GoKitLogger) Close() error {
 }
 
 func Debug(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.DebugValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.DebugValue())
 	logPrint(tmpLog, args)
 }
 
 func Debugf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.DebugValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.DebugValue())
 	logPrintf(tmpLog, args)
 }
 
 func Info(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).WithPrefix("caller", log.Caller(CallerNum), "level", level.InfoValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.InfoValue())
 	logPrint(tmpLog, args)
 }
 
 func Infof(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).WithPrefix("caller", log.Caller(CallerNum), "level", level.InfoValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.InfoValue())
 	logPrintf(tmpLog, args)
 }
 
 func Warn(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.WarnValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.WarnValue())
 	logPrint(tmpLog, args)
 }
 
 func Warnf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.WarnValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.WarnValue())
 	logPrintf(tmpLog, args)
 }
 
 func Error(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrint(tmpLog, args)
 }
 
 func Errorf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrintf(tmpLog, args)
 }
 
 func Crit(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrint(tmpLog, args)
 	os.Exit(1)
 }
 
 func Critf(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum), "level", level.ErrorValue())
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum), "level", level.ErrorValue())
 	logPrint(tmpLog, args)
 	os.Exit(1)
 }
 
 func Log(args ...interface{}) {
-	tmpLog := log.NewContext(lg.Logger).With("caller", log.Caller(CallerNum))
+	tmpLog := log.With(lg.Logger, "caller", log.Caller(CallerNum))
 	logPrint(tmpLog, args)
 }
 
