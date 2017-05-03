@@ -265,7 +265,6 @@ func (nc *netrpcClient) heartbeat() {
 				checkTimes = 0
 			}
 		case <-nc.quit:
-			fmt.Printf("exit netrpc health check.")
 			nc.alive = false
 			nc.Client.Close()
 			t.Stop()
