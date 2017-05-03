@@ -56,6 +56,9 @@ func AddClient(netWork, hostPort string, ring *NetRPCRing) error {
 	return nil
 }
 
+// TODO
+// add remove function
+
 type NetRPCRingOpt struct {
 	NetWork  string
 	Addr     string
