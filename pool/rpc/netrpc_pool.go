@@ -112,6 +112,12 @@ func (n *NetRPCRing) GoWithMetaData(serviceMethod string, meta map[string]string
 	return c.Go(serviceMethod, meta, args, reply, done)
 }
 
+func (n *NetRPCRing) Close() {
+	for _, c := range n.pool {
+		c.Close()
+	}
+}
+
 func (n *NetRPCRing) receiveAliceConn() (*netrpcClient, error) {
 	var (
 		c    *netrpcClient
