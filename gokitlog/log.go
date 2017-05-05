@@ -15,11 +15,18 @@ const (
 	CallerNum     = 5
 )
 
+type LogFormat byte
+
+const (
+	JsonFormat LogFormat = 1 << iota
+	FmtFormat
+	NoFormat
+)
+
 func init() {
 	tmpLog := log.NewJSONLogger(os.Stdout)
 	tmpLog = log.With(tmpLog, "caller", log.DefaultCaller)
 	tmpLog = log.With(tmpLog, "ts", log.DefaultTimestampUTC)
-
 	tmpLog = level.NewFilter(tmpLog, level.AllowAll())
 	tmpLog = log.NewSyncLogger(tmpLog)
 
@@ -30,12 +37,37 @@ func init() {
 	}
 }
 
-func NewGoKitLogger(opt LogOption) (*GoKitLogger, error) {
-	ioWriter, err := NewLogWriter(opt)
-	if err != nil {
-		return nil, err
+func NewGoKitLogger(opt LogOption, format ...LogFormat) (*GoKitLogger, error) {
+	var (
+		ioWriter *LogWriter
+		tmpLog   log.Logger
+		err      error
+	)
+
+	if len(format) == 0 {
+		if ioWriter, err = NewLogWriter(opt); err != nil {
+			return nil, err
+		}
+		tmpLog = log.NewLogfmtLogger(ioWriter)
+	} else {
+		switch format[0] {
+		case JsonFormat:
+			if ioWriter, err = NewLogWriter(opt); err != nil {
+				return nil, err
+			}
+			tmpLog = log.NewJSONLogger(ioWriter)
+		case FmtFormat:
+			if ioWriter, err = NewLogWriter(opt); err != nil {
+				return nil, err
+			}
+			tmpLog = log.NewLogfmtLogger(ioWriter)
+		case NoFormat:
+			ioWriter = &LogWriter{File: nil}
+			tmpLog = log.NewNopLogger()
+		default:
+			panic("log format type is invalid")
+		}
 	}
-	tmpLog := log.NewJSONLogger(ioWriter)
 	tmpLog = log.With(tmpLog, "caller", log.DefaultCaller)
 	tmpLog = log.With(tmpLog, "ts", log.DefaultTimestampUTC)
 
@@ -225,6 +257,9 @@ func NewLogWriter(opt LogOption) (*LogWriter, error) {
 // TODO
 // use bufio buffer
 func (lw *LogWriter) Write(p []byte) (n int, err error) {
+	if lw.File == nil {
+		return
+	}
 	if time.Since(lw.oldTime).Minutes() > lw.segmentationThreshold {
 		if err = lw.renameLogFile(); err != nil {
 			return -1, err
@@ -241,21 +276,30 @@ func (lw *LogWriter) Write(p []byte) (n int, err error) {
 }
 
 func (lw *LogWriter) Close() error {
-	// return lw.renameLogFile()
-	return lw.File.Close()
+	if lw.File != nil {
+		return lw.File.Close()
+	}
+	return nil
 }
 
-func (lw *LogWriter) renameLogFile() error {
-	// split log file
-	stat, err := lw.File.Stat()
-	if err != nil {
+func (lw *LogWriter) renameLogFile() (err error) {
+	var (
+		stat                     os.FileInfo
+		srcFileName, dstFileName string
+	)
+
+	if lw.File == nil {
+		return
+	}
+
+	if stat, err = lw.File.Stat(); err != nil {
 		return err
 	}
-	srcFileName := fmt.Sprintf("%s/%s", lw.logDir, stat.Name())
+	srcFileName = fmt.Sprintf("%s/%s", lw.logDir, stat.Name())
 	if err = lw.File.Close(); err != nil {
 		return err
 	}
-	dstFileName := fmt.Sprintf("%s/%s_%s.log", lw.logDir, lw.logName,
+	dstFileName = fmt.Sprintf("%s/%s_%s.log", lw.logDir, lw.logName,
 		lw.oldTime.Format(logNameFormat))
 	fmt.Println(dstFileName, srcFileName)
 	os.Rename(srcFileName, dstFileName)
@@ -272,6 +316,9 @@ func logPrint(logger log.Logger, args []interface{}) {
 }
 
 func logPrintf(logger log.Logger, args []interface{}) {
+	var (
+		logFormat, msgContent string
+	)
 	if args == nil || len(args) == 0 {
 		logger.Log("msg")
 		return
@@ -280,8 +327,8 @@ func logPrintf(logger log.Logger, args []interface{}) {
 		logger.Log("msg", fmt.Sprintf("%s", args[0]))
 		return
 	}
-	// fmt.Println(args)
-	logFormat := fmt.Sprintf("%v", args[0])
-	msgContent := fmt.Sprintf(logFormat, args[1:]...)
+
+	logFormat = fmt.Sprintf("%v", args[0])
+	msgContent = fmt.Sprintf(logFormat, args[1:]...)
 	logger.Log("msg", msgContent)
 }

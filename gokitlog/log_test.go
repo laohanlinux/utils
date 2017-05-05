@@ -27,11 +27,11 @@ func TestGoKitLogger(t *testing.T) {
 		LogDir:                logDir,
 		SegmentationThreshold: 1,
 		LogName:               "test",
-		LogLevel:              "info",
+		LogLevel:              "debug",
 	}
 	os.Remove(logDir + "/" + "test.log")
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	lg, err := NewGoKitLogger(opt)
+	lg, err := NewGoKitLogger(opt, FmtFormat)
 	assert.Nil(t, err)
 	assert.NotNil(t, lg)
 	lg.Close()
@@ -45,6 +45,7 @@ func TestGoKitLogger(t *testing.T) {
 	Debug("test", time.Now().Unix())
 	Debug("test", time.Now().Unix())
 	Debug("test", time.Now().Unix())
+	Debugf("Hello Word, my name is lusy")
 	GlobalLog().Log("log", "log")
 	Crit("exit", true)
 }
