@@ -1,8 +1,8 @@
 package hashmap
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 
 	"github.com/laohanlinux/assert"
 	//"strconv"
@@ -39,12 +39,12 @@ func TestHashMap(t *testing.T) {
 func TestHashMap1(t *testing.T) {
 	//ky := make(map[string]string)
 	hm := NewHashMap(160, Hash32Func)
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		hm.AddEntry([]byte(k), []byte(k))
 	}
 	fmt.Printf("%#v\n", hm.nodes)
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		v := hm.LookupEntry([]byte(k))
 		//fmt.Println("TL:",string(k))
@@ -52,11 +52,11 @@ func TestHashMap1(t *testing.T) {
 		assert.Equal(t, string(v), k)
 	}
 
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		hm.DelEntry([]byte(k))
 	}
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		v := hm.LookupEntry([]byte(k))
 		//fmt.Println("TL:",string(k))
@@ -65,13 +65,12 @@ func TestHashMap1(t *testing.T) {
 
 	fmt.Printf("%#v\n", hm.nodes)
 
-
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		hm.AddEntry([]byte(k), []byte(k))
 	}
 	fmt.Printf("%#v\n", hm.nodes)
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		v := hm.LookupEntry([]byte(k))
 		//fmt.Println("TL:",string(k))
@@ -79,11 +78,11 @@ func TestHashMap1(t *testing.T) {
 		assert.Equal(t, string(v), k)
 	}
 
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		hm.DelEntry([]byte(k))
 	}
-	for i := 0; i < 1024; i ++ {
+	for i := 0; i < 1024; i++ {
 		k := strconv.Itoa(i)
 		v := hm.LookupEntry([]byte(k))
 		//fmt.Println("TL:",string(k))

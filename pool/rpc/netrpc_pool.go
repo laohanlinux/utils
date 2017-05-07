@@ -72,6 +72,10 @@ type NetRPCRing struct {
 	pool []*netrpcClients
 }
 
+func (n *NetRPCRing) Size() int {
+	return len(n.pool)
+}
+
 func (n *NetRPCRing) Call(serviceMethod string, args, reply interface{}) error {
 	var (
 		c   *netrpcClient
