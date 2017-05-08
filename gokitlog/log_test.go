@@ -20,6 +20,12 @@ func TestFirst(t *testing.T) {
 	tmpLog.Log("hello", "good")
 }
 
+func TestNopLogger(t *testing.T) {
+
+	Error("time", time.Now().Unix())
+	Debug("time", time.Now().Unix())
+}
+
 func TestGoKitLogger(t *testing.T) {
 	logDir, err := os.Getwd()
 	assert.Nil(t, err)
@@ -46,6 +52,7 @@ func TestGoKitLogger(t *testing.T) {
 	Debug("test", time.Now().Unix())
 	Debug("test", time.Now().Unix())
 	Debugf("Hello Word, my name is lusy")
+	Debug("array", []string{"a", "b"})
 	GlobalLog().Log("log", "log")
 	Crit("exit", true)
 }

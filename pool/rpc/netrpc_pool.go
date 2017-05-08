@@ -115,6 +115,10 @@ func (n *NetRPCRing) GoWithMetaData(serviceMethod string, meta map[string]string
 	return c.Go(serviceMethod, meta, args, reply, done)
 }
 
+func (n *NetRPCRing) Size() int {
+	return len(n.pool)
+}
+
 func (n *NetRPCRing) Close() {
 	for _, c := range n.pool {
 		c.Close()

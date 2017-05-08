@@ -312,6 +312,13 @@ func logPrint(logger log.Logger, args []interface{}) {
 		logger.Log()
 		return
 	}
+	if len(args) == 1 {
+		logger.Log("msg", fmt.Sprintf("%v", args[0]))
+		return
+	}
+	for i := 0; i < len(args); i++ {
+		args[i] = fmt.Sprintf("%v", args[i])
+	}
 	logger.Log(args...)
 }
 
