@@ -3,6 +3,7 @@ package httputils
 import (
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -12,7 +13,12 @@ const (
 	DefaultNetWork = "tcp"
 )
 
-func NewHTTPClientPool() *HttpClientPool {
+var (
+	defaultConnKeepTime = time.Duration(time.Second * 30)
+)
+
+func NewHTTPClientPool(connKeepTime time.Duration) *HttpClientPool {
+	defaultConnKeepTime = connKeepTime
 	return &HttpClientPool{
 		httpClientLock: &sync.Mutex{},
 	}
@@ -33,10 +39,24 @@ func (hcp *HttpClientPool) GetHttpClient() *HTTPClient {
 		hcp.freeClient = c.next
 	}
 	hcp.httpClientLock.Unlock()
+
 	return c
 }
 
-func (hcp *HttpClientPool) Recycle(c *HTTPClient) {
+// Recycle should recycle the client that is not error
+func (hcp *HttpClientPool) Recycle(c *HTTPClient, resp ...*http.Response) {
+	if len(resp) > 0 && resp[0] != nil {
+		if value := resp[0].Header.Get("Connection"); value != "" {
+			value = strings.ToLower(value)
+			if !strings.Contains(value, "keep-alive") ||
+				strings.Contains(value, "close") {
+				resp[0].Close = true
+				c = nil
+				return
+			}
+		}
+	}
+
 	hcp.httpClientLock.Lock()
 	c.next = hcp.freeClient
 	hcp.freeClient = c
@@ -70,8 +90,8 @@ func NewHTTPClient(dialFn DialFunc) *HTTPClient {
 
 func DefaultDial(network, addr string) (net.Conn, error) {
 	dial := net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout:   defaultConnKeepTime,
+		KeepAlive: defaultConnKeepTime,
 	}
 	conn, err := dial.Dial(network, addr)
 	if err != nil {
