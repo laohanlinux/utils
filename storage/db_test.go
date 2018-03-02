@@ -15,5 +15,9 @@ func TestDB(t *testing.T) {
 		assert.Nil(t, patch.Changes("test"))
 		patch.InsertChanges("test", changes)
 		assert.NotNil(t, patch.Changes("test"))
+
+		changes = patch.Changes("test")
+		assert.NotNil(t, changes)
+
 	})
 }

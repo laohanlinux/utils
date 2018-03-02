@@ -9,8 +9,17 @@ type Iterator interface {
 	Next() bool
 }
 
-type StorageKey = []byte
-type StorageValue = []byte
+type StorageKey interface {
+	// AsBytes() []byte
+	// Encode() []byte
+	// Decode() StorageKey
+}
+
+type StorageValue interface {
+	// AsBytes() []byte
+	// Encode() []byte
+	// Decode() StorageValue
+}
 
 // type StorageValue interface {
 // 	Read()

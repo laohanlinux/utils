@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/laohanlinux/utils.svg?branch=master)](https://travis-ci.org/laohanlinux/utils)
 
 ## memory pool 
 
