@@ -2,13 +2,8 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"runtime"
-	"strconv"
 	"sync"
-	"time"
 
 	"github.com/laohanlinux/go-logger/logger"
 	. "github.com/laohanlinux/utils/memCachePool"
@@ -16,37 +11,37 @@ import (
 
 //	"time"
 
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	memCacheFactory := MemCacheFactory{}
-	memCacheObj := memCacheFactory.GetMemCachePool(NoBlockingBytesChanType, 1024)
-	m1, _ := memCacheObj.(*NoBlockingBytesChan)
+// func main() {
+// 	runtime.GOMAXPROCS(runtime.NumCPU())
+// 	memCacheFactory := MemCacheFactory{}
+// 	memCacheObj := memCacheFactory.GetMemCachePool(NoBlockingBytesChanType, 1024)
+// 	m1, _ := memCacheObj.(*NoBlockingBytesChan)
 
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
+// 	go func() {
+// 		fmt.Println(http.ListenAndServe("localhost:6060", nil))
+// 	}()
 
-	//
-	memCacheObj = memCacheFactory.GetMemCachePool(NoBlockingChanType, 1024)
-	m2, _ := memCacheObj.(*NoBlockingChan)
+// 	//
+// 	memCacheObj = memCacheFactory.GetMemCachePool(NoBlockingChanType, 1024)
+// 	m2, _ := memCacheObj.(*NoBlockingChan)
 
-	// ask for a block
-	var gGroup sync.WaitGroup
+// 	// ask for a block
+// 	var gGroup sync.WaitGroup
 
-	currency, _ := strconv.Atoi(os.Args[1])
-	for i := 0; i < currency; i++ {
-		gGroup.Add(1)
-		go func() {
-			defer gGroup.Done()
-			bench1(m1, m2, currency)
-			time.Sleep(time.Millisecond * 1)
-		}()
-	}
+// 	currency, _ := strconv.Atoi(os.Args[1])
+// 	for i := 0; i < currency; i++ {
+// 		gGroup.Add(1)
+// 		go func() {
+// 			defer gGroup.Done()
+// 			bench1(m1, m2, currency)
+// 			time.Sleep(time.Millisecond * 1)
+// 		}()
+// 	}
 
-	gGroup.Wait()
-	fmt.Println("等待总控制进程退出")
-	time.Sleep(time.Minute * 10)
-}
+// 	gGroup.Wait()
+// 	fmt.Println("等待总控制进程退出")
+// 	time.Sleep(time.Minute * 10)
+// }
 func bench1(nbbc *NoBlockingBytesChan, nbc *NoBlockingChan, currency int) {
 	send1 := nbbc.SendChan()
 	recycle1 := nbbc.RecycleChan()

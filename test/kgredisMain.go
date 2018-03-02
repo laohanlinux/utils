@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	_ "net/http/pprof"
 	"time"
 
 	"math/rand"
 	"net"
-	"runtime"
 	"strconv"
 	"sync"
 
@@ -90,18 +88,18 @@ func doGetWork(rdpc *kgredis.RedisPoolChan) {
 
 var numbers = 1
 
-func main() {
+// func main() {
 
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	//NewRedisPoolConn(address string, maxIdle, maxActive int, idleTimeout, defaultExpire int64)
-	rdpc, err := kgredis.NewRedisPoolChan("localhost:6379", 100)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	go doSetWork(rdpc)
-	go doGetWork(rdpc)
+// 	runtime.GOMAXPROCS(runtime.NumCPU())
+// 	//NewRedisPoolConn(address string, maxIdle, maxActive int, idleTimeout, defaultExpire int64)
+// 	rdpc, err := kgredis.NewRedisPoolChan("localhost:6379", 100)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		return
+// 	}
+// 	go doSetWork(rdpc)
+// 	go doGetWork(rdpc)
 
-	http.ListenAndServe(":6060", nil)
-	time.Sleep(time.Second * 30)
-}
+// 	http.ListenAndServe(":6060", nil)
+// 	time.Sleep(time.Second * 30)
+// }
